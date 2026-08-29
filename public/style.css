@@ -1,0 +1,152 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Segoe UI',sans-serif;
+}
+
+body{
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:linear-gradient(
+        135deg,
+        #0f172a,
+        #1e293b,
+        #4c1d95
+    );
+}
+
+.chat-container{
+    width:450px;
+    height:600px;
+    border-radius:25px;
+    overflow:hidden;
+    backdrop-filter:blur(20px);
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.1);
+    box-shadow:0 20px 50px rgba(0,0,0,0.4);
+}
+
+.header{
+    display:flex;
+    align-items:center;
+    gap:15px;
+    padding:20px;
+    background:linear-gradient(
+        90deg,
+        #2563eb,
+        #7c3aed
+    );
+    color:white;
+}
+
+.avatar{
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    background:white;
+}
+
+.header-info span{
+    font-size:12px;
+}
+
+.chat-box{
+    height:400px;
+    overflow-y:auto;
+    padding:20px;
+}
+
+.message{
+    max-width:75%;
+    padding:12px 15px;
+    margin:10px 0;
+    border-radius:16px;
+    color:white;
+}
+
+.sent{
+    background:#2563eb;
+    margin-left:auto;
+}
+
+.received{
+    background:#334155;
+    margin-right:auto;
+}
+
+.footer{
+    display:flex;
+    padding:15px;
+    background:rgba(255,255,255,0.05);
+}
+
+.footer input{
+    flex:1;
+    border:none;
+    outline:none;
+    padding:14px;
+    border-radius:30px;
+    font-size:16px;
+}
+
+.footer button{
+    width:55px;
+    margin-left:10px;
+    border:none;
+    border-radius:50%;
+    background:#2563eb;
+    color:white;
+    font-size:20px;
+    cursor:pointer;
+}
+
+.footer button:hover{
+    background:#1d4ed8;
+}
+
+.login-page{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:linear-gradient(
+        135deg,
+        #0f172a,
+        #1e293b,
+        #4c1d95
+    );
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.login-box{
+    background:white;
+    padding:30px;
+    border-radius:15px;
+    width:300px;
+    text-align:center;
+}
+
+.login-box h2{
+    margin-bottom:20px;
+}
+
+.login-box input{
+    width:100%;
+    padding:12px;
+    margin-bottom:15px;
+}
+
+.login-box button{
+    width:100%;
+    padding:12px;
+    background:#2563eb;
+    color:white;
+    border:none;
+    cursor:pointer;
+}
