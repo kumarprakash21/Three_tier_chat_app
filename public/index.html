@@ -1,108 +1,451 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat App</title>
 
-    <link rel="stylesheet" href="style.css">
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Advanced Chat App</title>
+
+    <link
+        rel="stylesheet"
+        href="style.css">
+
 </head>
+
 <body>
 
-    <!-- Registration Page -->
-    <div id="register-page" class="login-page">
 
-        <div class="login-box">
+<!-- =========================================
+     REGISTER PAGE
+========================================= -->
 
-            <h2>Create Account</h2>
+<div
+    id="register-page"
+    class="auth-page">
+
+    <div class="auth-card">
+
+        <div class="logo">
+            💬
+        </div>
+
+        <h1>Create Account</h1>
+
+        <p class="auth-subtitle">
+            Join the conversation
+        </p>
+
+        <div class="input-group">
+
+            <label>Username</label>
 
             <input
                 type="text"
                 id="regUsername"
-                placeholder="Username">
+                placeholder="Enter username"
+                autocomplete="username">
+
+        </div>
+
+        <div class="input-group">
+
+            <label>Password</label>
 
             <input
                 type="password"
                 id="regPassword"
-                placeholder="Password">
-
-            <button onclick="register()">
-                Register
-            </button>
+                placeholder="Create password"
+                autocomplete="new-password">
 
         </div>
 
+        <button
+            class="primary-button"
+            onclick="register()">
+
+            Create Account
+
+        </button>
+
+        <p class="switch-text">
+
+            Already have an account?
+
+            <button
+                class="link-button"
+                onclick="showLogin()">
+
+                Login
+
+            </button>
+
+        </p>
+
     </div>
 
-    <!-- Login Page -->
-    <div id="login-page"
-         class="login-page"
-         style="display:none;">
+</div>
 
-        <div class="login-box">
 
-            <h2>Login</h2>
+<!-- =========================================
+     LOGIN PAGE
+========================================= -->
+
+<div
+    id="login-page"
+    class="auth-page hidden">
+
+    <div class="auth-card">
+
+        <div class="logo">
+            💬
+        </div>
+
+        <h1>Welcome Back</h1>
+
+        <p class="auth-subtitle">
+            Login to continue chatting
+        </p>
+
+        <div class="input-group">
+
+            <label>Username</label>
 
             <input
                 type="text"
                 id="username"
-                placeholder="Username">
+                placeholder="Enter username"
+                autocomplete="username">
+
+        </div>
+
+        <div class="input-group">
+
+            <label>Password</label>
 
             <input
                 type="password"
                 id="password"
-                placeholder="Password">
+                placeholder="Enter password"
+                autocomplete="current-password">
 
-            <button onclick="login()">
-                Login
+        </div>
+
+        <button
+            class="primary-button"
+            onclick="login()">
+
+            Login
+
+        </button>
+
+        <p class="switch-text">
+
+            Don't have an account?
+
+            <button
+                class="link-button"
+                onclick="showRegister()">
+
+                Register
+
             </button>
+
+        </p>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================
+     CHAT APPLICATION
+========================================= -->
+
+<div
+    id="chat-container"
+    class="chat-app hidden">
+
+
+    <!-- =====================================
+         SIDEBAR
+    ====================================== -->
+
+    <aside class="sidebar">
+
+        <div class="sidebar-header">
+
+            <div class="brand">
+
+                <div class="brand-icon">
+                    💬
+                </div>
+
+                <div>
+                    <h2>ChatApp</h2>
+                    <span>Real-time chat</span>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- CURRENT USER -->
+
+        <div class="profile-card">
+
+            <div
+                id="profile-avatar"
+                class="avatar large-avatar">
+            </div>
+
+            <div class="profile-info">
+
+                <strong id="profile-name">
+                    User
+                </strong>
+
+                <span>
+
+                    <span class="online-dot"></span>
+
+                    Online
+
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- ONLINE USERS -->
+
+        <div class="users-section">
+
+            <div class="section-title">
+
+                <span>ONLINE USERS</span>
+
+                <span
+                    id="online-count"
+                    class="user-count">
+
+                    0
+
+                </span>
+
+            </div>
+
+            <div id="online-users">
+
+                <!-- Users added dynamically -->
+
+            </div>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================
+         MAIN CHAT
+    ====================================== -->
+
+    <main class="chat-main">
+
+
+        <!-- CHAT HEADER -->
+
+       <header class="chat-header">
+
+    <div class="chat-title">
+
+        <div
+            id="chat-header-avatar"
+            class="avatar">
+            💬
+        </div>
+
+        <div>
+
+            <h2 id="chat-user-name">
+                Select a user
+            </h2>
+
+            <div class="status-text">
+
+                <span class="online-dot"></span>
+
+                <span id="status-text">
+                    Choose someone to chat
+                </span>
+
+            </div>
 
         </div>
 
     </div>
 
-    <!-- Chat Page -->
-    <div class="chat-container"
-         id="chat-container"
-         style="display:none;">
 
-        <div class="header">
+    <!-- TOP RIGHT ACTIONS -->
 
-            <div class="avatar"></div>
+    <div class="header-actions">
 
-            <div class="header-info">
-                <h2>Chat App</h2>
-                <span>🟢 Online</span>
+        <button
+            class="icon-button"
+            onclick="toggleTheme()"
+            title="Change theme">
+
+            🌙
+
+        </button>
+
+        <button
+            class="top-logout-button"
+            onclick="logout()"
+            title="Logout">
+
+            🚪 Logout
+
+        </button>
+
+    </div>
+
+</header>
+
+        <!-- =================================
+             MESSAGES
+        ================================== -->
+
+        <section
+            id="messages"
+            class="chat-box">
+
+            <div class="welcome-message">
+
+                <div class="welcome-icon">
+                    👋
+                </div>
+
+                <h3>Welcome to General Chat</h3>
+
+                <p>
+                    Start a conversation with everyone online.
+                </p>
+
             </div>
+
+        </section>
+
+
+        <!-- =================================
+             TYPING INDICATOR
+        ================================== -->
+
+        <div
+            id="typing-indicator"
+            class="typing-indicator hidden">
+
+            <span class="typing-user"></span>
+
+            <span>is typing</span>
+
+            <span class="typing-dots">
+
+                <i></i>
+                <i></i>
+                <i></i>
+
+            </span>
 
         </div>
 
-        <div id="messages" class="chat-box">
 
-            <div class="message received">
-                Welcome to the Chat App 👋
+        <!-- =================================
+             MESSAGE INPUT
+        ================================== -->
+
+        <footer class="message-footer">
+
+            <button
+                class="attachment-button"
+                title="Attachment"
+                onclick="showComingSoon()">
+
+                📎
+
+            </button>
+
+            <div class="message-input-container">
+
+                <textarea
+                    id="msg"
+                    placeholder="Type a message..."
+                    rows="1"
+                    autocomplete="off"></textarea>
+
+                <button
+                    class="emoji-button"
+                    onclick="addEmoji()"
+                    title="Add emoji">
+
+                    😊
+
+                </button>
+
             </div>
 
-        </div>
+            <button
+                id="send-button"
+                class="send-button"
+                onclick="sendMessage()"
+                title="Send message">
 
-        <div class="footer">
-
-            <input
-                type="text"
-                id="msg"
-                placeholder="Type your message..."
-                autocomplete="off">
-
-            <button onclick="sendMessage()">
                 ➤
+
             </button>
 
-        </div>
+        </footer>
 
-    </div>
+        <!-- APPLICATION FOOTER -->
 
-     <script src="/socket.io/socket.io.js"></script>
-    <script src="app.js"></script>
+        <footer class="app-footer">
+
+    <span>
+        © 2026 ChatApp
+    </span>
+
+    <span class="footer-divider">
+        |
+    </span>
+
+    <span>
+        Real-time messaging
+    </span>
+
+    <span class="footer-status">
+        🟢 All systems operational
+    </span>
+
+</footer>
+
+    </main>
+
+</div>
+
+
+<!-- Socket.IO -->
+
+<script src="/socket.io/socket.io.js"></script>
+
+<!-- Application JS -->
+
+<script src="app.js"></script>
 
 </body>
 </html>
