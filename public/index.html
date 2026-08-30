@@ -2,266 +2,243 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0">
+    <title>ChatApp V2.1</title>
 
-    <title>ChatApp V2</title>
-
-    <link
-        rel="stylesheet"
-        href="style.css">
-
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
+    <!-- ==============================
+         REGISTER PAGE
+    =============================== -->
 
-<!-- ======================================
-     REGISTER
-====================================== -->
+    <div id="register-page" class="auth-page">
 
-<div
-    id="register-page"
-    class="auth-page">
+        <div class="auth-box">
 
-    <div class="auth-card">
+            <div class="logo">
+                💬
+            </div>
 
-        <div class="logo">
-            💬
-        </div>
+            <h2>Create Account</h2>
 
-        <h1>Create Account</h1>
+            <p class="auth-subtitle">
+                Join ChatApp today
+            </p>
 
-        <p class="auth-subtitle">
-            Create your ChatApp account
-        </p>
+            <input
+                type="text"
+                id="regUsername"
+                placeholder="Username"
+                autocomplete="username"
+            >
 
-        <input
-            id="regUsername"
-            type="text"
-            placeholder="Username">
+            <input
+                type="password"
+                id="regPassword"
+                placeholder="Password"
+                autocomplete="new-password"
+            >
 
-        <input
-            id="regPassword"
-            type="password"
-            placeholder="Password">
-
-        <button
-            class="primary-button"
-            onclick="register()">
-
-            Register
-
-        </button>
-
-        <p class="switch-text">
-
-            Already have an account?
-
-            <button
-                class="link-button"
-                onclick="showLogin()">
-
-                Login
-
-            </button>
-
-        </p>
-
-    </div>
-
-</div>
-
-
-<!-- ======================================
-     LOGIN
-====================================== -->
-
-<div
-    id="login-page"
-    class="auth-page hidden">
-
-    <div class="auth-card">
-
-        <div class="logo">
-            💬
-        </div>
-
-        <h1>Welcome Back</h1>
-
-        <p class="auth-subtitle">
-            Login to your account
-        </p>
-
-        <input
-            id="username"
-            type="text"
-            placeholder="Username">
-
-        <input
-            id="password"
-            type="password"
-            placeholder="Password">
-
-        <button
-            class="primary-button"
-            onclick="login()">
-
-            Login
-
-        </button>
-
-        <p class="switch-text">
-
-            Don't have an account?
-
-            <button
-                class="link-button"
-                onclick="showRegister()">
-
+            <button onclick="register()">
                 Register
-
             </button>
 
-        </p>
+            <p class="switch-text">
+                Already have an account?
+                <span onclick="showLogin()">
+                    Login
+                </span>
+            </p>
 
+        </div>
+
+    </div>
+
+
+    <!-- ==============================
+         LOGIN PAGE
+    =============================== -->
+
+    <div id="login-page" class="auth-page" style="display:none;">
+
+        <div class="auth-box">
+
+            <div class="logo">
+                💬
+            </div>
+
+            <h2>Welcome Back</h2>
+
+            <p class="auth-subtitle">
+                Login to continue chatting
+            </p>
+
+            <input
+                type="text"
+                id="username"
+                placeholder="Username"
+                autocomplete="username"
+            >
+
+            <input
+                type="password"
+                id="password"
+                placeholder="Password"
+                autocomplete="current-password"
+            >
+
+            <button onclick="login()">
+                Login
+            </button>
+
+            <p class="switch-text">
+                Don't have an account?
+                <span onclick="showRegister()">
+                    Register
+                </span>
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==============================
+         CHAT APPLICATION
+    =============================== -->
+
+    <div
+        id="chat-container"
+        class="chat-container"
+        style="display:none;"
+    >
+
+        <!-- ==============================
+             SIDEBAR
+        =============================== -->
+
+        <div class="sidebar">
+
+            <div class="sidebar-header">
+
+                <div class="app-title">
+
+    <div class="app-logo">
+        💬
+    </div>
+
+    <div>
+        <h2>ChatApp</h2>
+
+        <span id="logged-user">
+            Welcome
+        </span>
     </div>
 
 </div>
 
-
-<!-- ======================================
-     CHAT APP
-====================================== -->
-
-<div
-    id="chat-container"
-    class="chat-app hidden">
-
-
-    <!-- SIDEBAR -->
-
-    <aside class="sidebar">
-
-        <div class="sidebar-header">
-
-            <div class="brand">
-
-                <div class="brand-icon">
-                    💬
-                </div>
-
-                <div>
-
-                    <h2>ChatApp</h2>
-
-                    <span>
-                        Private messaging
-                    </span>
-
-                </div>
+                <button
+                    class="logout-button"
+                    onclick="logout()"
+                    title="Logout"
+                >
+                    🚪
+                </button>
 
             </div>
 
-        </div>
+
+            <!-- SEARCH -->
+
+            <div class="search-container">
+
+                <span class="search-icon">
+                    🔎
+                </span>
+
+                <input
+                    type="text"
+                    id="searchUser"
+                    placeholder="Search users..."
+                    autocomplete="off"
+                >
+
+            </div>
 
 
-        <!-- PROFILE -->
+            <!-- CHAT LIST -->
 
-        <div class="profile-card">
+            <div class="chat-list-header">
+                <span>CHATS</span>
+            </div>
 
             <div
-                id="profile-avatar"
-                class="avatar">
+                id="user-list"
+                class="user-list"
+            >
 
-                U
-
-            </div>
-
-            <div class="profile-info">
-
-                <strong id="profile-name">
-                    User
-                </strong>
-
-                <span>
-
-                    <span class="online-dot"></span>
-
-                    Online
-
-                </span>
-
-            </div>
-
-        </div>
-
-
-        <!-- USERS -->
-
-        <div class="users-section">
-
-            <div class="section-title">
-
-                <span>
-                    USERS
-                </span>
-
-                <span
-                    id="online-count"
-                    class="user-count">
-
-                    0
-
-                </span>
-
-            </div>
-
-
-            <div id="online-users">
-
-            </div>
-
-        </div>
-
-    </aside>
-
-
-    <!-- MAIN CHAT -->
-
-    <main class="chat-main">
-
-
-        <!-- HEADER -->
-
-        <header class="chat-header">
-
-            <div class="chat-title">
-
-                <div
-                    id="chat-header-avatar"
-                    class="avatar">
-
-                    💬
-
+                <div class="loading">
+                    Loading users...
                 </div>
 
-                <div>
+            </div>
 
-                    <h2 id="chat-user-name">
-                        Select a user
-                    </h2>
 
-                    <div class="status-text">
+            <!-- SIDEBAR FOOTER -->
 
-                        <span class="online-dot"></span>
+            <div class="sidebar-footer">
 
-                        <span id="status-text">
-                            Choose someone to chat
+                <span>
+                    © 2026 ChatApp
+                </span>
+
+                <span>
+                    V2.1
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- ==============================
+             MAIN CHAT
+        =============================== -->
+
+        <div class="main-chat">
+
+            <!-- CHAT HEADER -->
+
+            <div
+                id="chat-header"
+                class="chat-header"
+            >
+
+                <div class="chat-user-info">
+
+                    <div
+                        id="chat-avatar"
+                        class="chat-avatar"
+                    >
+                        ?
+                    </div>
+
+                    <div>
+
+                        <h3 id="chat-username">
+                            Select a user
+                        </h3>
+
+                        <span
+                            id="chat-status"
+                            class="chat-status"
+                        >
+                            Choose someone to start chatting
                         </span>
 
                     </div>
@@ -271,131 +248,98 @@
             </div>
 
 
-            <div class="header-actions">
+            <!-- MESSAGES -->
 
-                <button
-                    class="icon-button"
-                    onclick="toggleTheme()">
+            <div
+                id="messages"
+                class="messages"
+            >
 
-                    🌙
+                <div class="empty-chat">
 
-                </button>
+                    <div class="empty-icon">
+                        💬
+                    </div>
 
+                    <h3>
+                        Welcome to ChatApp
+                    </h3>
 
-                <button
-                    class="top-logout-button"
-                    onclick="logout()">
+                    <p>
+                        Select a user from the left
+                        to start a conversation.
+                    </p>
 
-                    🚪 Logout
-
-                </button>
-
-            </div>
-
-        </header>
-
-
-        <!-- MESSAGES -->
-
-        <section
-            id="messages"
-            class="chat-box">
-
-            <div class="welcome-message">
-
-                <div class="welcome-icon">
-                    💬
                 </div>
 
-                <h3>
-                    Select a user
-                </h3>
+            </div>
 
-                <p>
-                    Choose someone from the user list to start chatting.
-                </p>
+
+            <!-- TYPING INDICATOR -->
+
+            <div
+                id="typing-indicator"
+                class="typing-indicator"
+                style="display:none;"
+            >
+                <span></span>
+                <span></span>
+                <span></span>
+
+                <label>
+                    typing...
+                </label>
+            </div>
+
+
+            <!-- MESSAGE INPUT -->
+
+            <div class="message-footer">
+
+                <input
+                    type="text"
+                    id="msg"
+                    placeholder="Select a user first..."
+                    autocomplete="off"
+                    disabled
+                >
+
+                <button
+                    id="send-button"
+                    onclick="sendMessage()"
+                    disabled
+                >
+                    ➤
+                </button>
 
             </div>
 
-        </section>
 
+            <!-- MAIN FOOTER -->
 
-        <!-- TYPING -->
+            <div class="main-footer">
 
-        <div
-            id="typing-indicator"
-            class="typing-indicator hidden">
+                <span>
+                    🔒 Your messages are private
+                </span>
 
-            <span id="typing-user"></span>
+                <span>
+                    ChatApp V2.1
+                </span>
 
-            <span>
-                is typing
-            </span>
-
-            <span class="typing-dots">
-
-                <i></i>
-                <i></i>
-                <i></i>
-
-            </span>
+            </div>
 
         </div>
 
-
-        <!-- INPUT -->
-
-        <footer class="message-footer">
-
-            <div class="message-input-container">
-
-                <textarea
-                    id="msg"
-                    placeholder="Select a user first..."
-                    rows="1"
-                    disabled></textarea>
-
-            </div>
-
-            <button
-                id="send-button"
-                class="send-button"
-                onclick="sendMessage()"
-                disabled>
-
-                ➤
-
-            </button>
-
-        </footer>
+    </div>
 
 
-        <!-- APP FOOTER -->
+    <!-- SOCKET.IO -->
 
-        <footer class="app-footer">
+    <script src="/socket.io/socket.io.js"></script>
 
-            <span>
-                © 2026 ChatApp
-            </span>
-
-            <span>
-                •
-            </span>
-
-            <span>
-                Secure private messaging
-            </span>
-
-        </footer>
-
-    </main>
-
-</div>
-
-
-<script src="/socket.io/socket.io.js"></script>
-
-<script src="app.js"></script>
+    <script src="app.js"></script>
 
 </body>
+
 </html>
