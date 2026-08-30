@@ -9,7 +9,7 @@
         name="viewport"
         content="width=device-width, initial-scale=1.0">
 
-    <title>Advanced Chat App</title>
+    <title>ChatApp V2</title>
 
     <link
         rel="stylesheet"
@@ -20,9 +20,9 @@
 <body>
 
 
-<!-- =========================================
-     REGISTER PAGE
-========================================= -->
+<!-- ======================================
+     REGISTER
+====================================== -->
 
 <div
     id="register-page"
@@ -37,38 +37,24 @@
         <h1>Create Account</h1>
 
         <p class="auth-subtitle">
-            Join the conversation
+            Create your ChatApp account
         </p>
 
-        <div class="input-group">
+        <input
+            id="regUsername"
+            type="text"
+            placeholder="Username">
 
-            <label>Username</label>
-
-            <input
-                type="text"
-                id="regUsername"
-                placeholder="Enter username"
-                autocomplete="username">
-
-        </div>
-
-        <div class="input-group">
-
-            <label>Password</label>
-
-            <input
-                type="password"
-                id="regPassword"
-                placeholder="Create password"
-                autocomplete="new-password">
-
-        </div>
+        <input
+            id="regPassword"
+            type="password"
+            placeholder="Password">
 
         <button
             class="primary-button"
             onclick="register()">
 
-            Create Account
+            Register
 
         </button>
 
@@ -91,9 +77,9 @@
 </div>
 
 
-<!-- =========================================
-     LOGIN PAGE
-========================================= -->
+<!-- ======================================
+     LOGIN
+====================================== -->
 
 <div
     id="login-page"
@@ -108,32 +94,18 @@
         <h1>Welcome Back</h1>
 
         <p class="auth-subtitle">
-            Login to continue chatting
+            Login to your account
         </p>
 
-        <div class="input-group">
+        <input
+            id="username"
+            type="text"
+            placeholder="Username">
 
-            <label>Username</label>
-
-            <input
-                type="text"
-                id="username"
-                placeholder="Enter username"
-                autocomplete="username">
-
-        </div>
-
-        <div class="input-group">
-
-            <label>Password</label>
-
-            <input
-                type="password"
-                id="password"
-                placeholder="Enter password"
-                autocomplete="current-password">
-
-        </div>
+        <input
+            id="password"
+            type="password"
+            placeholder="Password">
 
         <button
             class="primary-button"
@@ -162,18 +134,16 @@
 </div>
 
 
-<!-- =========================================
-     CHAT APPLICATION
-========================================= -->
+<!-- ======================================
+     CHAT APP
+====================================== -->
 
 <div
     id="chat-container"
     class="chat-app hidden">
 
 
-    <!-- =====================================
-         SIDEBAR
-    ====================================== -->
+    <!-- SIDEBAR -->
 
     <aside class="sidebar">
 
@@ -186,8 +156,13 @@
                 </div>
 
                 <div>
+
                     <h2>ChatApp</h2>
-                    <span>Real-time chat</span>
+
+                    <span>
+                        Private messaging
+                    </span>
+
                 </div>
 
             </div>
@@ -195,13 +170,16 @@
         </div>
 
 
-        <!-- CURRENT USER -->
+        <!-- PROFILE -->
 
         <div class="profile-card">
 
             <div
                 id="profile-avatar"
-                class="avatar large-avatar">
+                class="avatar">
+
+                U
+
             </div>
 
             <div class="profile-info">
@@ -223,13 +201,15 @@
         </div>
 
 
-        <!-- ONLINE USERS -->
+        <!-- USERS -->
 
         <div class="users-section">
 
             <div class="section-title">
 
-                <span>ONLINE USERS</span>
+                <span>
+                    USERS
+                </span>
 
                 <span
                     id="online-count"
@@ -241,9 +221,8 @@
 
             </div>
 
-            <div id="online-users">
 
-                <!-- Users added dynamically -->
+            <div id="online-users">
 
             </div>
 
@@ -252,75 +231,71 @@
     </aside>
 
 
-    <!-- =====================================
-         MAIN CHAT
-    ====================================== -->
+    <!-- MAIN CHAT -->
 
     <main class="chat-main">
 
 
-        <!-- CHAT HEADER -->
+        <!-- HEADER -->
 
-       <header class="chat-header">
+        <header class="chat-header">
 
-    <div class="chat-title">
+            <div class="chat-title">
 
-        <div
-            id="chat-header-avatar"
-            class="avatar">
-            💬
-        </div>
+                <div
+                    id="chat-header-avatar"
+                    class="avatar">
 
-        <div>
+                    💬
 
-            <h2 id="chat-user-name">
-                Select a user
-            </h2>
+                </div>
 
-            <div class="status-text">
+                <div>
 
-                <span class="online-dot"></span>
+                    <h2 id="chat-user-name">
+                        Select a user
+                    </h2>
 
-                <span id="status-text">
-                    Choose someone to chat
-                </span>
+                    <div class="status-text">
+
+                        <span class="online-dot"></span>
+
+                        <span id="status-text">
+                            Choose someone to chat
+                        </span>
+
+                    </div>
+
+                </div>
 
             </div>
 
-        </div>
 
-    </div>
+            <div class="header-actions">
+
+                <button
+                    class="icon-button"
+                    onclick="toggleTheme()">
+
+                    🌙
+
+                </button>
 
 
-    <!-- TOP RIGHT ACTIONS -->
+                <button
+                    class="top-logout-button"
+                    onclick="logout()">
 
-    <div class="header-actions">
+                    🚪 Logout
 
-        <button
-            class="icon-button"
-            onclick="toggleTheme()"
-            title="Change theme">
+                </button>
 
-            🌙
+            </div>
 
-        </button>
+        </header>
 
-        <button
-            class="top-logout-button"
-            onclick="logout()"
-            title="Logout">
 
-            🚪 Logout
-
-        </button>
-
-    </div>
-
-</header>
-
-        <!-- =================================
-             MESSAGES
-        ================================== -->
+        <!-- MESSAGES -->
 
         <section
             id="messages"
@@ -329,13 +304,15 @@
             <div class="welcome-message">
 
                 <div class="welcome-icon">
-                    👋
+                    💬
                 </div>
 
-                <h3>Welcome to General Chat</h3>
+                <h3>
+                    Select a user
+                </h3>
 
                 <p>
-                    Start a conversation with everyone online.
+                    Choose someone from the user list to start chatting.
                 </p>
 
             </div>
@@ -343,17 +320,17 @@
         </section>
 
 
-        <!-- =================================
-             TYPING INDICATOR
-        ================================== -->
+        <!-- TYPING -->
 
         <div
             id="typing-indicator"
             class="typing-indicator hidden">
 
-            <span class="typing-user"></span>
+            <span id="typing-user"></span>
 
-            <span>is typing</span>
+            <span>
+                is typing
+            </span>
 
             <span class="typing-dots">
 
@@ -366,37 +343,17 @@
         </div>
 
 
-        <!-- =================================
-             MESSAGE INPUT
-        ================================== -->
+        <!-- INPUT -->
 
         <footer class="message-footer">
-
-            <button
-                class="attachment-button"
-                title="Attachment"
-                onclick="showComingSoon()">
-
-                📎
-
-            </button>
 
             <div class="message-input-container">
 
                 <textarea
                     id="msg"
-                    placeholder="Type a message..."
+                    placeholder="Select a user first..."
                     rows="1"
-                    autocomplete="off"></textarea>
-
-                <button
-                    class="emoji-button"
-                    onclick="addEmoji()"
-                    title="Add emoji">
-
-                    😊
-
-                </button>
+                    disabled></textarea>
 
             </div>
 
@@ -404,7 +361,7 @@
                 id="send-button"
                 class="send-button"
                 onclick="sendMessage()"
-                title="Send message">
+                disabled>
 
                 ➤
 
@@ -412,38 +369,31 @@
 
         </footer>
 
-        <!-- APPLICATION FOOTER -->
+
+        <!-- APP FOOTER -->
 
         <footer class="app-footer">
 
-    <span>
-        © 2026 ChatApp
-    </span>
+            <span>
+                © 2026 ChatApp
+            </span>
 
-    <span class="footer-divider">
-        |
-    </span>
+            <span>
+                •
+            </span>
 
-    <span>
-        Real-time messaging
-    </span>
+            <span>
+                Secure private messaging
+            </span>
 
-    <span class="footer-status">
-        🟢 All systems operational
-    </span>
-
-</footer>
+        </footer>
 
     </main>
 
 </div>
 
 
-<!-- Socket.IO -->
-
 <script src="/socket.io/socket.io.js"></script>
-
-<!-- Application JS -->
 
 <script src="app.js"></script>
 

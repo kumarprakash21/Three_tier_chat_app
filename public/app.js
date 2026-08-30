@@ -1,23 +1,30 @@
-const socket = io();
+let socket = null;
 
-let username = "";
+let token = null;
 
-let typingTimeout;
+let currentUser = null;
+
+let selectedUser = null;
+
+let typingTimeout = null;
 
 let isTyping = false;
 
 
-/* =========================================
-   ELEMENTS
-========================================= */
-
-const input = document.getElementById("msg");
+/*
+=========================================
+ELEMENTS
+=========================================
+*/
 
 const messages =
     document.getElementById("messages");
 
-const typingIndicator =
-    document.getElementById("typing-indicator");
+const input =
+    document.getElementById("msg");
+
+const sendButton =
+    document.getElementById("send-button");
 
 const onlineUsersContainer =
     document.getElementById("online-users");
@@ -25,102 +32,120 @@ const onlineUsersContainer =
 const onlineCount =
     document.getElementById("online-count");
 
-const statusText =
-    document.getElementById("status-text");
+const typingIndicator =
+    document.getElementById("typing-indicator");
+
+const typingUser =
+    document.getElementById("typing-user");
 
 
-/* =========================================
-   REGISTER
-========================================= */
+/*
+=========================================
+REGISTER
+=========================================
+*/
 
-function register() {
+async function register() {
 
-    const regUsername =
+    const username =
         document
             .getElementById("regUsername")
             .value
             .trim();
 
-    const regPassword =
+    const password =
         document
             .getElementById("regPassword")
             .value;
 
 
-    if (!regUsername || !regPassword) {
+    if (!username || !password) {
 
-        alert("Please fill all fields");
-
-        return;
-
-    }
-
-
-    if (regUsername.length < 3) {
-
-        alert("Username must be at least 3 characters");
+        alert(
+            "Please enter username and password"
+        );
 
         return;
 
     }
 
 
-    if (regPassword.length < 4) {
+    try {
 
-        alert("Password must be at least 4 characters");
+        const response =
+            await fetch(
+                "/api/register",
+                {
 
-        return;
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            username,
+                            password
+                        })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            alert(data.message);
+
+            return;
+
+        }
+
+
+        alert(
+            "Registration successful!"
+        );
+
+
+        document
+            .getElementById("regUsername")
+            .value = "";
+
+        document
+            .getElementById("regPassword")
+            .value = "";
+
+
+        showLogin();
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "Unable to connect to server"
+        );
 
     }
-
-
-    const existingUser =
-        localStorage.getItem(regUsername);
-
-
-    if (existingUser) {
-
-        alert("Username already exists");
-
-        return;
-
-    }
-
-
-    localStorage.setItem(
-
-        regUsername,
-
-        JSON.stringify({
-
-            username: regUsername,
-
-            password: regPassword
-
-        })
-
-    );
-
-
-    alert("Registration successful!");
-
-    document.getElementById("regUsername").value = "";
-
-    document.getElementById("regPassword").value = "";
-
-
-    showLogin();
 
 }
 
 
-/* =========================================
-   LOGIN
-========================================= */
+/*
+=========================================
+LOGIN
+=========================================
+*/
 
-function login() {
+async function login() {
 
-    const enteredUsername =
+    const username =
         document
             .getElementById("username")
             .value
@@ -132,404 +157,986 @@ function login() {
             .value;
 
 
-    if (!enteredUsername || !password) {
+    if (!username || !password) {
 
-        alert("Please enter username and password");
-
-        return;
-
-    }
-
-
-    const storedUser =
-        localStorage.getItem(enteredUsername);
-
-
-    if (!storedUser) {
-
-        alert("User not found");
+        alert(
+            "Please enter username and password"
+        );
 
         return;
 
     }
-
-
-    let user;
 
 
     try {
 
-        user = JSON.parse(storedUser);
+        const response =
+            await fetch(
+                "/api/login",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            username,
+                            password
+                        })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            alert(data.message);
+
+            return;
+
+        }
+
+
+        token =
+            data.token;
+
+
+        currentUser =
+            data.user;
+
+
+        /*
+        Store JWT
+        */
+
+        sessionStorage.setItem(
+            "chatToken",
+            token
+        );
+
+
+        sessionStorage.setItem(
+            "chatUser",
+            JSON.stringify(
+                currentUser
+            )
+        );
+
+
+        showChat();
+
+
+        connectSocket();
+
+
+        loadUsers();
+
 
     } catch (error) {
 
-        alert("Invalid user data");
+        console.error(error);
 
-        return;
-
-    }
-
-
-    if (user.password !== password) {
-
-        alert("Invalid username or password");
-
-        return;
+        alert(
+            "Unable to connect to server"
+        );
 
     }
-
-
-    username = user.username;
-
-    document.getElementById("chat-user-name").textContent =
-    username;
-
-
-    // Save current session
-    sessionStorage.setItem(
-        "chatUsername",
-        username
-    );
-
-
-    // Update UI
-    document.getElementById(
-        "profile-name"
-    ).textContent = username;
-
-
-    document.getElementById(
-        "profile-avatar"
-    ).textContent = getInitials(username);
-
-
-    // Show chat
-    document.getElementById(
-        "login-page"
-    ).classList.add("hidden");
-
-
-    document.getElementById(
-        "register-page"
-    ).classList.add("hidden");
-
-
-    document.getElementById(
-        "chat-container"
-    ).classList.remove("hidden");
-
-
-    statusText.textContent = "Online";
-
-
-    // Tell server user joined
-    socket.emit("user joined", username);
-
-
-    input.focus();
 
 }
 
 
-/* =========================================
-   SHOW LOGIN
-========================================= */
+/*
+=========================================
+CONNECT SOCKET
+=========================================
+*/
 
-function showLogin() {
+function connectSocket() {
 
-    document
-        .getElementById("register-page")
-        .classList.add("hidden");
+    if (socket) {
 
-
-    document
-        .getElementById("login-page")
-        .classList.remove("hidden");
-
-}
-
-
-/* =========================================
-   SHOW REGISTER
-========================================= */
-
-function showRegister() {
-
-    document
-        .getElementById("login-page")
-        .classList.add("hidden");
-
-
-    document
-        .getElementById("register-page")
-        .classList.remove("hidden");
-
-}
-
-
-/* =========================================
-   LOGOUT
-========================================= */
-
-function logout() {
-
-    if (!confirm("Are you sure you want to logout?")) {
-
-        return;
+        socket.disconnect();
 
     }
 
 
-    socket.disconnect();
+    socket =
+        io({
+
+            auth: {
+                token: token
+            }
+
+        });
 
 
-    sessionStorage.removeItem(
-        "chatUsername"
-    );
+    /*
+    Connected
+    */
 
+    socket.on(
+        "connect",
+        () => {
 
-    username = "";
+            console.log(
+                "Socket connected"
+            );
 
-
-    document
-        .getElementById("chat-container")
-        .classList.add("hidden");
-
-
-    document
-        .getElementById("login-page")
-        .classList.remove("hidden");
-
-
-    document.getElementById("username").value = "";
-
-    document.getElementById("password").value = "";
-
-
-    // Reconnect socket for next login
-    socket.connect();
-
-}
-
-
-/* =========================================
-   SEND MESSAGE
-========================================= */
-
-function sendMessage() {
-
-    const text =
-        input.value.trim();
-
-
-    if (!text) {
-
-        return;
-
-    }
-
-
-    if (!username) {
-
-        alert("Please login first");
-
-        return;
-
-    }
-
-
-    // Stop typing indicator
-    stopTyping();
-
-
-    socket.emit(
-        "chat message",
-        {
-            message: text
         }
     );
 
 
-    input.value = "";
+    /*
+    Connection error
+    */
 
-    autoResizeTextarea();
+    socket.on(
+        "connect_error",
+        (error) => {
+
+            console.error(
+                "Socket error:",
+                error.message
+            );
+
+            if (
+                error.message
+                    .includes("token")
+            ) {
+
+                logout();
+
+            }
+
+        }
+    );
+
+
+    /*
+    Online users
+    */
+
+    socket.on(
+        "online users",
+        (users) => {
+
+            updateOnlineUsers(
+                users
+            );
+
+        }
+    );
+
+
+    /*
+    User online
+    */
+
+    socket.on(
+        "user online",
+        () => {
+
+            loadUsers();
+
+        }
+    );
+
+
+    /*
+    User offline
+    */
+
+    socket.on(
+        "user offline",
+        () => {
+
+            loadUsers();
+
+        }
+    );
+
+
+    /*
+    Private message
+    */
+
+    socket.on(
+        "private message",
+        (data) => {
+
+            /*
+            Only show message
+            for selected conversation
+            */
+
+            if (
+                !selectedUser
+            ) {
+
+                return;
+
+            }
+
+
+            const isCurrentChat =
+
+                (
+                    data.sender ===
+                    selectedUser.id &&
+
+                    data.receiver ===
+                    currentUser.id
+                )
+
+                ||
+
+                (
+                    data.sender ===
+                    currentUser.id &&
+
+                    data.receiver ===
+                    selectedUser.id
+                );
+
+
+            if (!isCurrentChat) {
+
+                return;
+
+            }
+
+
+            addMessage(data);
+
+            scrollToBottom();
+
+
+            /*
+            Mark received message read
+            */
+
+            if (
+                data.sender ===
+                selectedUser.id
+            ) {
+
+                socket.emit(
+                    "mark read",
+                    selectedUser.id
+                );
+
+            }
+
+        }
+    );
+
+
+    /*
+    Typing
+    */
+
+    socket.on(
+        "user typing",
+        (data) => {
+
+            if (
+                selectedUser &&
+                data.userId ===
+                selectedUser.id
+            ) {
+
+                typingUser.textContent =
+                    data.username;
+
+                typingIndicator
+                    .classList
+                    .remove("hidden");
+
+            }
+
+        }
+    );
+
+
+    /*
+    Stop typing
+    */
+
+    socket.on(
+        "user stopped typing",
+        (data) => {
+
+            if (
+                selectedUser &&
+                data.userId ===
+                selectedUser.id
+            ) {
+
+                typingIndicator
+                    .classList
+                    .add("hidden");
+
+            }
+
+        }
+    );
+
+
+    /*
+    Message read
+    */
+
+    socket.on(
+        "messages read",
+        () => {
+
+            document
+                .querySelectorAll(
+                    ".read-status"
+                )
+                .forEach(
+                    element => {
+
+                        element.textContent =
+                            "✓✓";
+
+                    }
+                );
+
+        }
+    );
+
+
+    /*
+    Message deleted
+    */
+
+    socket.on(
+        "message deleted",
+        (data) => {
+
+            const element =
+                document.querySelector(
+                    `[data-message-id="${data.messageId}"]`
+                );
+
+
+            if (element) {
+
+                element.remove();
+
+            }
+
+        }
+    );
+
+
+    /*
+    Message edited
+    */
+
+    socket.on(
+        "message edited",
+        (data) => {
+
+            const element =
+                document.querySelector(
+                    `[data-message-id="${data.id}"]`
+                );
+
+
+            if (!element) {
+
+                return;
+
+            }
+
+
+            const text =
+                element.querySelector(
+                    ".message-text"
+                );
+
+
+            if (text) {
+
+                text.textContent =
+                    data.message;
+
+            }
+
+
+            const edited =
+                element.querySelector(
+                    ".edited-label"
+                );
+
+
+            if (edited) {
+
+                edited.textContent =
+                    "Edited";
+
+            }
+
+        }
+    );
+
+}
+
+
+/*
+=========================================
+LOAD USERS
+=========================================
+*/
+
+async function loadUsers() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/users",
+                {
+
+                    headers: {
+
+                        Authorization:
+                            `Bearer ${token}`
+
+                    }
+
+                }
+            );
+
+
+        if (!response.ok) {
+
+            return;
+
+        }
+
+
+        const users =
+            await response.json();
+
+
+        renderUsers(
+            users
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            error
+        );
+
+    }
+
+}
+
+
+/*
+=========================================
+RENDER USERS
+=========================================
+*/
+
+function renderUsers(users) {
+
+    onlineUsersContainer.innerHTML =
+        "";
+
+
+    const online =
+        users.filter(
+            user => user.online
+        );
+
+
+    onlineCount.textContent =
+        online.length;
+
+
+    users.forEach(
+        user => {
+
+            /*
+            Don't show yourself
+            */
+
+            if (
+                user.id ===
+                currentUser.id
+            ) {
+
+                return;
+
+            }
+
+
+            const element =
+                document.createElement(
+                    "div"
+                );
+
+
+            element.className =
+                "online-user";
+
+
+            if (
+                selectedUser &&
+                selectedUser.id ===
+                user.id
+            ) {
+
+                element.classList.add(
+                    "selected"
+                );
+
+            }
+
+
+            const avatar =
+                document.createElement(
+                    "div"
+                );
+
+
+            avatar.className =
+                "avatar";
+
+
+            avatar.style.width =
+                "32px";
+
+
+            avatar.style.height =
+                "32px";
+
+
+            avatar.style.fontSize =
+                "12px";
+
+
+            avatar.textContent =
+                getInitials(
+                    user.username
+                );
+
+
+            const name =
+                document.createElement(
+                    "span"
+                );
+
+
+            name.className =
+                "online-user-name";
+
+
+            name.textContent =
+                user.username;
+
+
+            const status =
+                document.createElement(
+                    "span"
+                );
+
+
+            status.className =
+                "user-status";
+
+
+            status.textContent =
+                user.online
+                    ? "🟢"
+                    : "⚫";
+
+
+            element.appendChild(
+                avatar
+            );
+
+
+            element.appendChild(
+                name
+            );
+
+
+            element.appendChild(
+                status
+            );
+
+
+            element.onclick =
+                () => {
+
+                    selectUser(
+                        user
+                    );
+
+                };
+
+
+            onlineUsersContainer
+                .appendChild(
+                    element
+                );
+
+        }
+    );
+
+}
+
+
+/*
+=========================================
+SELECT USER
+=========================================
+*/
+
+async function selectUser(user) {
+
+    selectedUser =
+        user;
+
+
+    /*
+    Header
+    */
+
+    document
+        .getElementById(
+            "chat-user-name"
+        )
+        .textContent =
+        user.username;
+
+
+    document
+        .getElementById(
+            "chat-header-avatar"
+        )
+        .textContent =
+        getInitials(
+            user.username
+        );
+
+
+    document
+        .getElementById(
+            "status-text"
+        )
+        .textContent =
+        user.online
+            ? "Online"
+            : formatLastSeen(
+                user.lastSeen
+            );
+
+
+    /*
+    Enable input
+    */
+
+    input.disabled =
+        false;
+
+
+    sendButton.disabled =
+        false;
+
+
+    input.placeholder =
+        `Message ${user.username}...`;
+
+
+    /*
+    Clear messages
+    */
+
+    messages.innerHTML =
+        "";
+
+
+    /*
+    Load history
+    */
+
+    await loadMessages(
+        user.id
+    );
+
+
+    /*
+    Refresh users
+    */
+
+    loadUsers();
+
 
     input.focus();
 
 }
 
 
-/* =========================================
-   RECEIVE MESSAGE
-========================================= */
+/*
+=========================================
+LOAD MESSAGE HISTORY
+=========================================
+*/
 
-socket.on(
-    "chat message",
-    (data) => {
+async function loadMessages(
+    userId
+) {
 
-        addMessage(data);
+    try {
+
+        const response =
+            await fetch(
+                `/api/messages/${userId}`,
+                {
+
+                    headers: {
+
+                        Authorization:
+                            `Bearer ${token}`
+
+                    }
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            alert(data.message);
+
+            return;
+
+        }
+
+
+        data.forEach(
+            message => {
+
+                addMessage(
+                    {
+                        id:
+                            message._id,
+
+                        sender:
+                            message.sender,
+
+                        receiver:
+                            message.receiver,
+
+                        message:
+                            message.message,
+
+                        read:
+                            message.read,
+
+                        edited:
+                            message.edited,
+
+                        timestamp:
+                            message.createdAt
+
+                    }
+                );
+
+            }
+        );
+
 
         scrollToBottom();
 
 
-        // Browser notification
-        if (
-            data.user !== username &&
-            document.hidden
-        ) {
+    } catch (error) {
 
-            showNotification(
-                data.user,
-                data.message
-            );
-
-        }
+        console.error(
+            error
+        );
 
     }
-);
+
+}
 
 
-/* =========================================
-   ADD MESSAGE
-========================================= */
+/*
+=========================================
+ADD MESSAGE
+=========================================
+*/
 
 function addMessage(data) {
 
-    // Remove welcome screen
-    const welcome =
-        document.querySelector(
-            ".welcome-message"
+    const wrapper =
+        document.createElement(
+            "div"
         );
 
 
-    if (welcome) {
-
-        welcome.remove();
-
-    }
+    wrapper.className =
+        "message-wrapper";
 
 
-    const wrapper =
-        document.createElement("div");
-
-
-    const message =
-        document.createElement("div");
+    const isOwn =
+        data.sender ===
+        currentUser.id;
 
 
     wrapper.classList.add(
-        "message-wrapper"
+        isOwn
+            ? "sent"
+            : "received"
     );
 
 
-    message.classList.add(
-        "message"
-    );
+    const message =
+        document.createElement(
+            "div"
+        );
 
 
-    if (data.user === username) {
+    message.className =
+        "message";
 
-        wrapper.classList.add("sent");
 
-    } else {
-
-        wrapper.classList.add("received");
-
-    }
+    message.dataset.messageId =
+        data.id;
 
 
     /*
-    ========================================
-    USERNAME
-    ========================================
+    Text
     */
 
-    const userElement =
-        document.createElement("div");
+    const text =
+        document.createElement(
+            "div"
+        );
 
 
-    userElement.classList.add(
-        "message-user"
-    );
+    text.className =
+        "message-text";
 
 
-    userElement.textContent =
-        data.user;
-
-
-    /*
-    ========================================
-    MESSAGE TEXT
-    ========================================
-    */
-
-    const textElement =
-        document.createElement("div");
-
-
-    textElement.classList.add(
-        "message-text"
-    );
-
-
-    // textContent prevents HTML injection
-    textElement.textContent =
+    text.textContent =
         data.message;
 
 
     /*
-    ========================================
-    TIME
-    ========================================
+    Meta
     */
 
-    const metaElement =
-        document.createElement("div");
+    const meta =
+        document.createElement(
+            "div"
+        );
 
 
-    metaElement.classList.add(
-        "message-meta"
+    meta.className =
+        "message-meta";
+
+
+    const time =
+        document.createElement(
+            "span"
+        );
+
+
+    time.textContent =
+        formatTime(
+            data.timestamp
+        );
+
+
+    meta.appendChild(
+        time
     );
 
 
-    const timeElement =
-        document.createElement("span");
+    /*
+    Edited
+    */
+
+    if (data.edited) {
+
+        const edited =
+            document.createElement(
+                "span"
+            );
 
 
-    timeElement.textContent =
-        formatTime(data.timestamp);
+        edited.className =
+            "edited-label";
 
 
-    metaElement.appendChild(
-        timeElement
-    );
+        edited.textContent =
+            "Edited";
 
 
-    // Read receipt for own messages
-    if (data.user === username) {
+        meta.appendChild(
+            edited
+        );
 
-        const check =
-            document.createElement("span");
+    }
 
-        check.textContent = "✓✓";
 
-        metaElement.appendChild(check);
+    /*
+    Read status
+    */
+
+    if (isOwn) {
+
+        const read =
+            document.createElement(
+                "span"
+            );
+
+
+        read.className =
+            "read-status";
+
+
+        read.textContent =
+            data.read
+                ? "✓✓"
+                : "✓";
+
+
+        meta.appendChild(
+            read
+        );
 
     }
 
 
     message.appendChild(
-        userElement
+        text
     );
 
 
     message.appendChild(
-        textElement
-    );
-
-
-    message.appendChild(
-        metaElement
+        meta
     );
 
 
@@ -545,18 +1152,74 @@ function addMessage(data) {
 }
 
 
-/* =========================================
-   TYPING START
-========================================= */
+/*
+=========================================
+SEND MESSAGE
+=========================================
+*/
+
+function sendMessage() {
+
+    const text =
+        input.value.trim();
+
+
+    if (
+        !text ||
+        !selectedUser ||
+        !socket
+    ) {
+
+        return;
+
+    }
+
+
+    socket.emit(
+        "private message",
+        {
+
+            receiverId:
+                selectedUser.id,
+
+            message:
+                text
+
+        }
+    );
+
+
+    input.value =
+        "";
+
+
+    autoResize();
+
+    stopTyping();
+
+
+    input.focus();
+
+}
+
+
+/*
+=========================================
+TYPING
+=========================================
+*/
 
 input.addEventListener(
     "input",
     () => {
 
-        autoResizeTextarea();
+        autoResize();
 
 
-        if (!username) {
+        if (
+            !selectedUser ||
+            !socket
+        ) {
 
             return;
 
@@ -565,9 +1228,14 @@ input.addEventListener(
 
         if (!isTyping) {
 
-            isTyping = true;
+            isTyping =
+                true;
 
-            socket.emit("typing");
+
+            socket.emit(
+                "typing",
+                selectedUser.id
+            );
 
         }
 
@@ -579,32 +1247,36 @@ input.addEventListener(
 
         typingTimeout =
             setTimeout(
-                () => {
-
-                    stopTyping();
-
-                },
-                1200
+                stopTyping,
+                1000
             );
 
     }
 );
 
 
-/* =========================================
-   STOP TYPING
-========================================= */
+/*
+=========================================
+STOP TYPING
+=========================================
+*/
 
 function stopTyping() {
 
-    if (!isTyping) {
+    if (
+        !isTyping ||
+        !selectedUser ||
+        !socket
+    ) {
 
         return;
 
     }
 
 
-    isTyping = false;
+    isTyping =
+        false;
+
 
     clearTimeout(
         typingTimeout
@@ -612,253 +1284,18 @@ function stopTyping() {
 
 
     socket.emit(
-        "stop typing"
+        "stop typing",
+        selectedUser.id
     );
 
 }
 
 
-/* =========================================
-   RECEIVE TYPING
-========================================= */
-
-socket.on(
-    "user typing",
-    (data) => {
-
-        const typingUser =
-            document.querySelector(
-                ".typing-user"
-            );
-
-
-        typingUser.textContent =
-            data.user;
-
-
-        typingIndicator.classList.remove(
-            "hidden"
-        );
-
-    }
-);
-
-
-/* =========================================
-   USER STOPPED TYPING
-========================================= */
-
-socket.on(
-    "user stopped typing",
-    () => {
-
-        typingIndicator.classList.add(
-            "hidden"
-        );
-
-    }
-);
-
-
-/* =========================================
-   ONLINE USERS
-========================================= */
-
-socket.on(
-    "online users",
-    (users) => {
-
-        onlineCount.textContent =
-            users.length;
-
-
-        onlineUsersContainer.innerHTML =
-            "";
-
-
-        users.forEach(
-            (user) => {
-
-                const userElement =
-                    document.createElement(
-                        "div"
-                    );
-
-
-                userElement.classList.add(
-                    "online-user"
-                );
-
-
-                const avatar =
-                    document.createElement(
-                        "div"
-                    );
-
-
-                avatar.classList.add(
-                    "avatar"
-                );
-
-
-                avatar.style.width = "32px";
-
-                avatar.style.height = "32px";
-
-                avatar.style.fontSize = "12px";
-
-
-                avatar.textContent =
-                    getInitials(user);
-
-
-                const name =
-                    document.createElement(
-                        "span"
-                    );
-
-
-                name.classList.add(
-                    "online-user-name"
-                );
-
-
-                name.textContent =
-                    user;
-
-
-                const status =
-                    document.createElement(
-                        "span"
-                    );
-
-
-                status.classList.add(
-                    "user-status"
-                );
-
-
-                status.textContent =
-                    "●";
-
-
-                userElement.appendChild(
-                    avatar
-                );
-
-
-                userElement.appendChild(
-                    name
-                );
-
-
-                userElement.appendChild(
-                    status
-                );
-
-
-                onlineUsersContainer.appendChild(
-                    userElement
-                );
-
-            }
-        );
-
-    }
-);
-
-
-/* =========================================
-   SYSTEM MESSAGE
-========================================= */
-
-socket.on(
-    "system message",
-    (data) => {
-
-        addSystemMessage(
-            data.message
-        );
-
-    }
-);
-
-
-/* =========================================
-   ADD SYSTEM MESSAGE
-========================================= */
-
-function addSystemMessage(message) {
-
-    const element =
-        document.createElement("div");
-
-
-    element.classList.add(
-        "system-message"
-    );
-
-
-    element.textContent =
-        message;
-
-
-    messages.appendChild(
-        element
-    );
-
-
-    scrollToBottom();
-
-}
-
-
-/* =========================================
-   SOCKET CONNECTED
-========================================= */
-
-socket.on(
-    "connect",
-    () => {
-
-        console.log(
-            "Connected to server:",
-            socket.id
-        );
-
-
-        statusText.textContent =
-            username
-                ? "Online"
-                : "Connected";
-
-    }
-);
-
-
-/* =========================================
-   SOCKET DISCONNECTED
-========================================= */
-
-socket.on(
-    "disconnect",
-    () => {
-
-        console.log(
-            "Disconnected from server"
-        );
-
-
-        statusText.textContent =
-            "Disconnected";
-
-    }
-);
-
-
-/* =========================================
-   ENTER KEY
-========================================= */
+/*
+=========================================
+ENTER TO SEND
+=========================================
+*/
 
 input.addEventListener(
     "keydown",
@@ -879,13 +1316,16 @@ input.addEventListener(
 );
 
 
-/* =========================================
-   TEXTAREA AUTO RESIZE
-========================================= */
+/*
+=========================================
+TEXTAREA RESIZE
+=========================================
+*/
 
-function autoResizeTextarea() {
+function autoResize() {
 
-    input.style.height = "auto";
+    input.style.height =
+        "auto";
 
 
     input.style.height =
@@ -897,29 +1337,225 @@ function autoResizeTextarea() {
 }
 
 
-/* =========================================
-   SCROLL
-========================================= */
+/*
+=========================================
+SHOW CHAT
+=========================================
+*/
 
-function scrollToBottom() {
+function showChat() {
 
-    messages.scrollTop =
-        messages.scrollHeight;
+    document
+        .getElementById(
+            "register-page"
+        )
+        .classList.add(
+            "hidden"
+        );
+
+
+    document
+        .getElementById(
+            "login-page"
+        )
+        .classList.add(
+            "hidden"
+        );
+
+
+    document
+        .getElementById(
+            "chat-container"
+        )
+        .classList.remove(
+            "hidden"
+        );
+
+
+    document
+        .getElementById(
+            "profile-name"
+        )
+        .textContent =
+        currentUser.username;
+
+
+    document
+        .getElementById(
+            "profile-avatar"
+        )
+        .textContent =
+        getInitials(
+            currentUser.username
+        );
 
 }
 
 
-/* =========================================
-   FORMAT TIME
-========================================= */
+/*
+=========================================
+SHOW LOGIN
+=========================================
+*/
 
-function formatTime(timestamp) {
+function showLogin() {
 
-    const date =
-        new Date(timestamp);
+    document
+        .getElementById(
+            "register-page"
+        )
+        .classList.add(
+            "hidden"
+        );
 
 
-    return date.toLocaleTimeString(
+    document
+        .getElementById(
+            "login-page"
+        )
+        .classList.remove(
+            "hidden"
+        );
+
+}
+
+
+/*
+=========================================
+SHOW REGISTER
+=========================================
+*/
+
+function showRegister() {
+
+    document
+        .getElementById(
+            "login-page"
+        )
+        .classList.add(
+            "hidden"
+        );
+
+
+    document
+        .getElementById(
+            "register-page"
+        )
+        .classList.remove(
+            "hidden"
+        );
+
+}
+
+
+/*
+=========================================
+LOGOUT
+=========================================
+*/
+
+function logout() {
+
+    if (
+        socket
+    ) {
+
+        socket.disconnect();
+
+        socket = null;
+
+    }
+
+
+    sessionStorage.removeItem(
+        "chatToken"
+    );
+
+
+    sessionStorage.removeItem(
+        "chatUser"
+    );
+
+
+    token =
+        null;
+
+
+    currentUser =
+        null;
+
+
+    selectedUser =
+        null;
+
+
+    document
+        .getElementById(
+            "chat-container"
+        )
+        .classList.add(
+            "hidden"
+        );
+
+
+    document
+        .getElementById(
+            "login-page"
+        )
+        .classList.remove(
+            "hidden"
+        );
+
+
+    input.disabled =
+        true;
+
+
+    sendButton.disabled =
+        true;
+
+
+    input.value =
+        "";
+
+}
+
+
+/*
+=========================================
+LAST SEEN
+=========================================
+*/
+
+function formatLastSeen(
+    date
+) {
+
+    if (!date) {
+
+        return "Offline";
+
+    }
+
+
+    return `Last seen ${formatTime(date)}`;
+
+}
+
+
+/*
+=========================================
+FORMAT TIME
+=========================================
+*/
+
+function formatTime(
+    timestamp
+) {
+
+    return new Date(
+        timestamp
+    ).toLocaleTimeString(
         [],
         {
             hour: "2-digit",
@@ -930,18 +1566,15 @@ function formatTime(timestamp) {
 }
 
 
-/* =========================================
-   USER INITIALS
-========================================= */
+/*
+=========================================
+INITIALS
+=========================================
+*/
 
-function getInitials(name) {
-
-    if (!name) {
-
-        return "?";
-
-    }
-
+function getInitials(
+    name
+) {
 
     return name
         .substring(0, 2)
@@ -950,89 +1583,41 @@ function getInitials(name) {
 }
 
 
-/* =========================================
-   EMOJI
-========================================= */
+/*
+=========================================
+SCROLL
+=========================================
+*/
 
-function addEmoji() {
+function scrollToBottom() {
 
-    input.value += " 😊";
-
-    input.focus();
-
-    autoResizeTextarea();
-
-}
-
-
-/* =========================================
-   COMING SOON
-========================================= */
-
-function showComingSoon() {
-
-    alert(
-        "File and image sharing will be added in Version 2."
-    );
+    messages.scrollTop =
+        messages.scrollHeight;
 
 }
 
 
-/* =========================================
-   BROWSER NOTIFICATION
-========================================= */
+/*
+=========================================
+ONLINE USERS
+=========================================
+*/
 
-function showNotification(
-    user,
-    message
+function updateOnlineUsers(
+    users
 ) {
 
-    if (
-        !("Notification" in window)
-    ) {
-
-        return;
-
-    }
-
-
-    if (
-        Notification.permission === "granted"
-    ) {
-
-        new Notification(
-            `${user} sent a message`,
-            {
-                body: message
-            }
-        );
-
-    }
+    onlineCount.textContent =
+        users.length;
 
 }
 
 
-/* =========================================
-   REQUEST NOTIFICATION PERMISSION
-========================================= */
-
-function requestNotificationPermission() {
-
-    if (
-        "Notification" in window &&
-        Notification.permission === "default"
-    ) {
-
-        Notification.requestPermission();
-
-    }
-
-}
-
-
-/* =========================================
-   THEME
-========================================= */
+/*
+=========================================
+THEME
+=========================================
+*/
 
 function toggleTheme() {
 
@@ -1040,72 +1625,33 @@ function toggleTheme() {
         "light-theme"
     );
 
-
-    const isLight =
-        document.body.classList.contains(
-            "light-theme"
-        );
-
-
-    localStorage.setItem(
-        "theme",
-        isLight
-            ? "light"
-            : "dark"
-    );
-
 }
 
 
-/* =========================================
-   LOAD THEME
-========================================= */
+/*
+=========================================
+SESSION RESTORE
+=========================================
+*/
 
-function loadTheme() {
+function restoreSession() {
 
-    const theme =
-        localStorage.getItem(
-            "theme"
-        );
-
-
-    if (theme === "light") {
-
-        document.body.classList.add(
-            "light-theme"
-        );
-
-    }
-
-}
-
-
-/* =========================================
-   AUTO LOGIN SESSION
-========================================= */
-
-function checkSession() {
-
-    const savedUsername =
+    const savedToken =
         sessionStorage.getItem(
-            "chatUsername"
+            "chatToken"
         );
 
 
-    if (!savedUsername) {
-
-        return;
-
-    }
-
-
-    const storedUser =
-        localStorage.getItem(
-            savedUsername
+    const savedUser =
+        sessionStorage.getItem(
+            "chatUser"
         );
 
 
-    if (!storedUser) {
+    if (
+        !savedToken ||
+        !savedUser
+    ) {
 
         return;
 
@@ -1114,64 +1660,41 @@ function checkSession() {
 
     try {
 
-        const user =
-            JSON.parse(storedUser);
+        token =
+            savedToken;
 
 
-        username =
-            user.username;
+        currentUser =
+            JSON.parse(
+                savedUser
+            );
 
 
-        document.getElementById(
-            "profile-name"
-        ).textContent =
-            username;
+        showChat();
 
+        connectSocket();
 
-        document.getElementById(
-            "profile-avatar"
-        ).textContent =
-            getInitials(username);
-
-
-        document.getElementById(
-            "register-page"
-        ).classList.add("hidden");
-
-
-        document.getElementById(
-            "login-page"
-        ).classList.add("hidden");
-
-
-        document.getElementById(
-            "chat-container"
-        ).classList.remove("hidden");
-
-
-        socket.emit(
-            "user joined",
-            username
-        );
+        loadUsers();
 
 
     } catch (error) {
 
-        sessionStorage.removeItem(
-            "chatUsername"
+        console.error(
+            error
         );
+
+
+        logout();
 
     }
 
 }
 
 
-/* =========================================
-   INITIALIZATION
-========================================= */
+/*
+=========================================
+INITIALIZE
+=========================================
+*/
 
-loadTheme();
-
-checkSession();
-
-requestNotificationPermission();
+restoreSession();
