@@ -101,9 +101,11 @@ async function register() {
 
     if (!username || !password) {
 
-        alert(
-            "Please fill all fields"
-        );
+        showNotification(
+    "Missing Information",
+    "Please enter username and password.",
+    "error"
+);
 
         return;
     }
@@ -140,18 +142,22 @@ async function register() {
 
         if (!response.ok) {
 
-            alert(
-                data.message ||
-                "Registration failed"
-            );
+            showNotification(
+    "Registration Failed",
+    data.message ||
+        "Unable to create account.",
+    "error"
+);
 
             return;
         }
 
 
-        alert(
-            "Registration successful"
-        );
+        showNotification(
+    "Account Created",
+    "Your account was created successfully.",
+    "success"
+);
 
 
         document.getElementById(
@@ -201,9 +207,11 @@ async function login() {
 
     if (!loginUsername || !password) {
 
-        alert(
-            "Please enter username and password"
-        );
+        showNotification(
+    "Missing Information",
+    "Please enter username and password.",
+    "error"
+);
 
         return;
     }
@@ -242,10 +250,12 @@ async function login() {
 
         if (!response.ok) {
 
-            alert(
-                data.message ||
-                "Login failed"
-            );
+            showNotification(
+    "Login Failed",
+    data.message ||
+        "Invalid username or password.",
+    "error"
+);
 
             return;
         }
@@ -318,9 +328,11 @@ document.getElementById(
 
         console.error(error);
 
-        alert(
-            "Unable to connect to server"
-        );
+        showNotification(
+    "Connection Error",
+    "Unable to connect to the server.",
+    "error"
+);
 
     }
 
@@ -441,14 +453,34 @@ function connectSocket() {
     ==============================================
     */
 
-    socket.on(
-        "conversation updated",
-        () => {
+    socket.on("conversation updated", async () => {
 
-            loadUsers();
+    await loadUsers();
+
+    /*
+    Keep currently opened conversation selected
+    */
+
+    if (selectedUserId) {
+
+        const selectedUser =
+            users.find(
+                user =>
+                    String(user.id) ===
+                    String(selectedUserId)
+            );
+
+        if (selectedUser) {
+
+            selectedUser.unreadCount = 0;
 
         }
-    );
+
+    }
+
+    renderUsers(users);
+
+});
 
 
     /*
@@ -559,14 +591,35 @@ function connectSocket() {
     ==============================================
     */
 
-    socket.on(
-        "messages read",
-        () => {
+    socket.on("messages read", async () => {
 
-            loadUsers();
+    await loadUsers();
+
+    /*
+    If this conversation is currently open,
+    force unread count to zero.
+    */
+
+    if (selectedUserId) {
+
+        const selectedUser =
+            users.find(
+                user =>
+                    String(user.id) ===
+                    String(selectedUserId)
+            );
+
+        if (selectedUser) {
+
+            selectedUser.unreadCount = 0;
 
         }
-    );
+
+    }
+
+    renderUsers(users);
+
+});
 
 
     /*
@@ -1026,73 +1079,81 @@ OPEN CHAT
 ==================================================
 */
 
-async function openChat(
-    user
-) {
 
-    selectedUserId =
-        user.id;
+async function openChat(user) {
 
-    selectedUsername =
-        user.username;
-
+    selectedUserId = user.id;
+    selectedUsername = user.username;
 
     /*
-    Update header
+    ==========================================
+    UPDATE CHAT HEADER
+    ==========================================
     */
 
-    document.getElementById(
-        "chat-username"
-    ).textContent =
+    document.getElementById("chat-username").textContent =
         user.username;
 
-
-    document.getElementById(
-        "chat-avatar"
-    ).textContent =
-        user.username
-            .charAt(0)
-            .toUpperCase();
-
+    document.getElementById("chat-avatar").textContent =
+        user.username.charAt(0).toUpperCase();
 
     updateSelectedUserStatus();
 
 
     /*
-    Enable message input
+    ==========================================
+    ENABLE MESSAGE BOX
+    ==========================================
     */
 
-    input.disabled =
-        false;
+    input.disabled = false;
 
     input.placeholder =
         `Message ${user.username}...`;
 
-    document.getElementById(
-        "send-button"
-    ).disabled =
+    document.getElementById("send-button").disabled =
         false;
 
 
     /*
-    Clear previous messages
+    ==========================================
+    IMPORTANT
+    Remove unread count immediately
+    ==========================================
+    */
+
+    const selectedUser =
+        users.find(
+            u => String(u.id) === String(user.id)
+        );
+
+    if (selectedUser) {
+        selectedUser.unreadCount = 0;
+    }
+
+
+    /*
+    Re-render immediately
+    */
+
+    renderUsers(users);
+
+
+    /*
+    ==========================================
+    LOAD CHAT HISTORY
+    ==========================================
     */
 
     messages.innerHTML = "";
 
-
-    /*
-    Load conversation
-    */
-
-    await loadMessages(
-        user.id
-    );
+    await loadMessages(user.id);
 
 
     /*
-    Tell server that messages
-    have been read
+    ==========================================
+    MARK READ THROUGH SOCKET TOO
+    ==========================================
     */
 
     if (socket) {
@@ -1106,14 +1167,19 @@ async function openChat(
 
 
     /*
-    Refresh list.
-
-    This removes the unread badge.
+    Keep selected chat highlighted
     */
 
-    await loadUsers();
-
+    renderUsers(users);
 }
+
+
+    /*
+    ==========================================
+    Tell server messages are read
+    ==========================================
+    */
+
 
 
 /*
@@ -1919,3 +1985,395 @@ document.getElementById(
 
     }
 );
+
+
+/* =========================================
+   DELETE ACCOUNT
+========================================= */
+
+/* =========================================
+   CUSTOM NOTIFICATION MODAL
+========================================= */
+
+function showNotification(
+    title,
+    message,
+    type = "success"
+) {
+
+    const modal =
+        document.getElementById(
+            "notification-modal"
+        );
+
+    const icon =
+        document.getElementById(
+            "notification-icon"
+        );
+
+    const titleElement =
+        document.getElementById(
+            "notification-title"
+        );
+
+    const messageElement =
+        document.getElementById(
+            "notification-message"
+        );
+
+
+    if (!modal) {
+        console.error(
+            "notification-modal not found"
+        );
+        return;
+    }
+
+
+    titleElement.textContent =
+        title;
+
+    messageElement.textContent =
+        message;
+
+
+    if (type === "error") {
+
+        icon.textContent = "✕";
+
+        icon.style.background =
+            "#fee2e2";
+
+        icon.style.color =
+            "#dc2626";
+
+    } else {
+
+        icon.textContent = "✓";
+
+        icon.style.background =
+            "#dcfce7";
+
+        icon.style.color =
+            "#16a34a";
+
+    }
+
+
+    modal.style.display =
+        "flex";
+
+}
+
+
+/* =========================================
+   CLOSE NOTIFICATION
+========================================= */
+
+function closeNotification() {
+
+    const modal =
+        document.getElementById(
+            "notification-modal"
+        );
+
+
+    if (modal) {
+
+        modal.style.display =
+            "none";
+
+    }
+
+}
+
+
+/* =========================================
+   OPEN DELETE ACCOUNT MODAL
+========================================= */
+
+function deleteAccount() {
+
+    const modal =
+        document.getElementById(
+            "delete-modal"
+        );
+
+
+    if (!modal) {
+
+        console.error(
+            "delete-modal not found"
+        );
+
+        return;
+
+    }
+
+
+    modal.style.display =
+        "flex";
+
+}
+
+
+/* =========================================
+   CLOSE DELETE ACCOUNT MODAL
+========================================= */
+
+function closeDeleteModal() {
+
+    const modal =
+        document.getElementById(
+            "delete-modal"
+        );
+
+
+    if (modal) {
+
+        modal.style.display =
+            "none";
+
+    }
+
+}
+
+
+/* =========================================
+   CONFIRM DELETE ACCOUNT
+========================================= */
+
+async function confirmDeleteAccount() {
+
+    console.log(
+        "Deleting account..."
+    );
+
+
+    const token =
+        localStorage.getItem(
+            "token"
+        );
+
+
+    if (!token) {
+
+        closeDeleteModal();
+
+
+        showNotification(
+            "Session Expired",
+            "Please login again.",
+            "error"
+        );
+
+
+        return;
+
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/user",
+                {
+
+                    method: "DELETE",
+
+                    headers: {
+
+                        Authorization:
+                            `Bearer ${token}`
+
+                    }
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        console.log(
+            "Delete response:",
+            data
+        );
+
+
+        if (!response.ok) {
+
+            closeDeleteModal();
+
+
+            showNotification(
+                "Delete Failed",
+                data.message ||
+                    "Unable to delete account.",
+                "error"
+            );
+
+
+            return;
+
+        }
+
+
+        /*
+        ======================================
+        DISCONNECT SOCKET
+        ======================================
+        */
+
+        if (socket) {
+
+            socket.disconnect();
+
+            socket = null;
+
+        }
+
+
+        /*
+        ======================================
+        CLEAR LOCAL STORAGE
+        ======================================
+        */
+
+        localStorage.removeItem(
+            "token"
+        );
+
+        localStorage.removeItem(
+            "user"
+        );
+
+
+        /*
+        ======================================
+        RESET VARIABLES
+        ======================================
+        */
+
+        username = "";
+
+        currentUserId = "";
+
+        selectedUserId = "";
+
+        selectedUsername = "";
+
+        users = [];
+
+
+        /*
+        ======================================
+        CLOSE DELETE MODAL
+        ======================================
+        */
+
+        closeDeleteModal();
+
+
+        /*
+        ======================================
+        HIDE CHAT
+        ======================================
+        */
+
+        document.getElementById(
+            "chat-container"
+        ).style.display =
+            "none";
+
+
+        /*
+        ======================================
+        SHOW LOGIN PAGE
+        ======================================
+        */
+
+        document.getElementById(
+            "login-page"
+        ).style.display =
+            "flex";
+
+
+        /*
+        ======================================
+        CLEAR LOGIN FORM
+        ======================================
+        */
+
+        document.getElementById(
+            "username"
+        ).value = "";
+
+
+        document.getElementById(
+            "password"
+        ).value = "";
+
+
+        /*
+        ======================================
+        RESET CHAT
+        ======================================
+        */
+
+        messages.innerHTML = `
+
+            <div class="empty-chat">
+
+                <div class="empty-icon">
+                    💬
+                </div>
+
+                <h3>
+                    Welcome to ChatApp
+                </h3>
+
+                <p>
+                    Select a user to start chatting.
+                </p>
+
+            </div>
+
+        `;
+
+
+        /*
+        ======================================
+        SHOW SUCCESS MODAL
+        ======================================
+        */
+
+        showNotification(
+            "Account Deleted",
+            "Your account and chat history have been permanently deleted.",
+            "success"
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Delete account error:",
+            error
+        );
+
+
+        closeDeleteModal();
+
+
+        showNotification(
+            "Server Error",
+            "Unable to delete account. Please try again.",
+            "error"
+        );
+
+    }
+
+}
