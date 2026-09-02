@@ -1,5 +1,15 @@
 const mongoose = require("mongoose");
 
+const attachmentSchema = new mongoose.Schema(
+    {
+        name: String,
+        type: String,
+        size: Number,
+        url: String
+    },
+    { _id: false }
+);
+
 const messageSchema = new mongoose.Schema(
     {
         sender: {
@@ -16,9 +26,15 @@ const messageSchema = new mongoose.Schema(
 
         message: {
             type: String,
-            required: true,
+            required: false,
+            default: "",
             trim: true,
             maxlength: 2000
+        },
+
+        attachment: {
+            type: attachmentSchema,
+            default: undefined
         },
 
         read: {

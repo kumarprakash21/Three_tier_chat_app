@@ -28,6 +28,21 @@ The application includes authentication, persistent private messages, online pre
 - New-message in-app notifications when the conversation is not currently open.
 - Profile details and preferences persist in MongoDB.
 
+### V2.3 Media and file sharing
+
+- Emoji picker with frequently used emojis.
+- Upload and send images in private conversations.
+- Upload and send videos with browser playback controls.
+- Share PDF files and common office documents.
+- Share plain-text documents.
+- Attachment upload limit of 50 MB per file.
+- Image, video, and document metadata are stored with the message.
+- Images and videos display inline in the conversation.
+- PDFs and documents display as downloadable attachment links.
+- Download links preserve the original filename.
+- Attachment uploads use server-side storage instead of storing binary data in MongoDB.
+- Empty attachment-only messages are supported.
+
 ### Private real-time chat
 
 - One-to-one private conversations between registered users.
@@ -63,9 +78,9 @@ Users can edit messages they sent. The edit action opens a custom application mo
 
 #### Delete message
 
-Users can delete messages they sent for both participants.
+Either participant can delete a message for both participants.
 
-- Only the original sender can delete a message.
+- The sender or recipient can delete a message.
 - Deletion requires confirmation in a custom danger modal.
 - The message is removed from MongoDB.
 - The message disappears from both users' open conversations.
@@ -123,6 +138,7 @@ The hidden chat relationships are stored in the user's `hiddenChats` array.
 | `GET` | `/api/profile` | Yes | Get the authenticated user's profile and preferences |
 | `PATCH` | `/api/profile` | Yes | Update display name, bio, profile picture, and notifications |
 | `PATCH` | `/api/password` | Yes | Change the authenticated user's password |
+| `POST` | `/api/upload` | Yes | Upload an image, video, PDF, or supported document |
 | `DELETE` | `/api/account` | Yes | Permanently delete the current account and its messages |
 | `DELETE` | `/api/chats/:userId` | Yes | Hide a user from the current user's chat list |
 
@@ -130,7 +146,7 @@ The hidden chat relationships are stored in the user's `hiddenChats` array.
 
 ### Client to server
 
-- `private message` - Send a private message.
+- `private message` - Send a text message, emoji message, or attachment message.
 - `typing` - Notify the recipient that the user is typing.
 - `stop typing` - Stop the typing notification.
 - `mark read` - Mark messages from a user as read.

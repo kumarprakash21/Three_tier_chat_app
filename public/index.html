@@ -320,6 +320,10 @@
 
             <div class="message-footer">
 
+                <button id="emoji-button" class="composer-tool" type="button" title="Add emoji" aria-label="Add emoji">☺</button>
+                <button id="attachment-button" class="composer-tool" type="button" title="Attach file" aria-label="Attach file">+</button>
+                <input id="attachment-input" type="file" hidden accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
+
                 <input
                     type="text"
                     id="msg"
@@ -337,6 +341,9 @@
                 </button>
 
             </div>
+
+            <div id="emoji-picker" class="emoji-picker" aria-label="Emoji picker"></div>
+            <div id="attachment-preview" class="attachment-preview" style="display:none;"></div>
 
 
             <!-- MAIN FOOTER -->

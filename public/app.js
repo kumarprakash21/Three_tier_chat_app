@@ -31,6 +31,8 @@ let cropDragging = false;
 let cropStartX = 0;
 let cropStartY = 0;
 
+let pendingAttachment = null;
+
 
 /*
 ==================================================
@@ -311,6 +313,85 @@ function applyCrop() {
     currentProfile.profilePicture = croppedImage;
     closeCropper();
     showToast("Photo cropped. Save your profile to apply it.", "success");
+}
+
+const emojiList = ["😀", "😂", "😍", "🥳", "😊", "😎", "😭", "😡", "👍", "👎", "❤️", "🔥", "🎉", "👏", "🙏", "✅", "💯", "✨", "🤝", "🚀"];
+const emojiPicker = document.getElementById("emoji-picker");
+
+emojiList.forEach(emoji => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = emoji;
+    button.addEventListener("click", () => {
+        input.value += emoji;
+        input.focus();
+        emojiPicker.classList.remove("open");
+    });
+    emojiPicker.appendChild(button);
+});
+
+document.getElementById("emoji-button").addEventListener("click", () => {
+    emojiPicker.classList.toggle("open");
+});
+
+document.addEventListener("click", event => {
+    if (
+        !emojiPicker.contains(event.target) &&
+        event.target !== document.getElementById("emoji-button")
+    ) {
+        emojiPicker.classList.remove("open");
+    }
+});
+
+document.getElementById("attachment-button").addEventListener("click", () => {
+    if (!selectedUserId) {
+        showToast("Select a user before attaching a file", "error");
+        return;
+    }
+    document.getElementById("attachment-input").click();
+});
+
+document.getElementById("attachment-input").addEventListener("change", event => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+        showToast("Files must be 50 MB or smaller", "error");
+        event.target.value = "";
+        return;
+    }
+
+    pendingAttachment = file;
+    const preview = document.getElementById("attachment-preview");
+    preview.innerHTML = `<span>📎 ${escapeHtml(file.name)} · ${formatFileSize(file.size)}</span><button type="button" aria-label="Remove attachment">×</button>`;
+    preview.style.display = "flex";
+    preview.querySelector("button").addEventListener("click", clearAttachment);
+});
+
+function clearAttachment() {
+    pendingAttachment = null;
+    document.getElementById("attachment-input").value = "";
+    document.getElementById("attachment-preview").style.display = "none";
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function uploadAttachment(file) {
+    const response = await fetch("/api/upload", {
+        method: "POST",
+        body: file,
+        headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": file.type || "application/octet-stream",
+            "X-File-Name": encodeURIComponent(file.name)
+        }
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Unable to upload file");
+    return data;
 }
 
 async function saveProfile() {
@@ -1696,14 +1777,18 @@ ADD MESSAGE
 
 function addMessage(data) {
 
+    // Socket.IO messages use `id`; MongoDB history uses `_id`.
+    const messageId = data.id || data._id;
+    const messageTimestamp = data.timestamp || data.createdAt;
+
     /*
     Avoid duplicate messages
     */
 
     if (
-        data.id &&
+        messageId &&
         document.querySelector(
-            `[data-message-id="${data.id}"]`
+            `[data-message-id="${messageId}"]`
         )
     ) {
         return;
@@ -1717,10 +1802,10 @@ function addMessage(data) {
     div.classList.add("message");
 
 
-    if (data.id) {
+    if (messageId) {
 
         div.dataset.messageId =
-            data.id;
+            messageId;
 
     }
 
@@ -1789,7 +1874,7 @@ function addMessage(data) {
 
     timeDiv.textContent =
         formatTime(
-            data.timestamp
+            messageTimestamp
         );
 
 
@@ -1869,6 +1954,10 @@ function addMessage(data) {
         usernameDiv
     );
 
+    if (data.attachment) {
+        div.appendChild(createAttachmentElement(data.attachment));
+    }
+
     div.appendChild(
         textDiv
     );
@@ -1882,30 +1971,61 @@ function addMessage(data) {
         div
     );
 
-    if (isMyMessage && data.id) {
+    if (messageId) {
 
         const actions = document.createElement("div");
         actions.className = "message-actions";
 
-        const editButton = document.createElement("button");
-        editButton.type = "button";
-        editButton.className = "message-action";
-        editButton.textContent = "Edit";
-        editButton.onclick = () => editMessage(data.id, data.message);
+        if (isMyMessage) {
+            const editButton = document.createElement("button");
+            editButton.type = "button";
+            editButton.className = "message-action";
+            editButton.textContent = "Edit";
+            editButton.onclick = () => editMessage(messageId, data.message);
+            actions.appendChild(editButton);
+        }
 
         const deleteButton = document.createElement("button");
         deleteButton.type = "button";
         deleteButton.className = "message-action message-action-danger";
         deleteButton.textContent = "Delete";
-        deleteButton.onclick = () => deleteMessage(data.id);
+        deleteButton.onclick = () => deleteMessage(messageId);
 
-        actions.append(editButton, deleteButton);
+        actions.appendChild(deleteButton);
         div.appendChild(actions);
     }
 
 
     scrollToBottom();
 
+}
+
+function createAttachmentElement(attachment) {
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "message-attachment";
+
+    if (attachment.type?.startsWith("image/")) {
+        const image = document.createElement("img");
+        image.src = attachment.url;
+        image.alt = attachment.name;
+        wrapper.appendChild(image);
+    } else if (attachment.type?.startsWith("video/")) {
+        const video = document.createElement("video");
+        video.src = attachment.url;
+        video.controls = true;
+        wrapper.appendChild(video);
+    }
+
+    const link = document.createElement("a");
+    link.href = attachment.url;
+    link.download = attachment.name;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = `⬇ ${attachment.name} · ${formatFileSize(attachment.size || 0)}`;
+    wrapper.appendChild(link);
+
+    return wrapper;
 }
 
 
@@ -2012,14 +2132,14 @@ SEND MESSAGE
 ==================================================
 */
 
-function sendMessage() {
+async function sendMessage() {
 
     const text =
         input.value.trim();
 
 
     if (
-        !text ||
+        (!text && !pendingAttachment) ||
         !selectedUserId ||
         !socket
     ) {
@@ -2029,6 +2149,18 @@ function sendMessage() {
     }
 
 
+    let attachment = null;
+
+    if (pendingAttachment) {
+        try {
+            showToast(`Uploading ${pendingAttachment.name}...`);
+            attachment = await uploadAttachment(pendingAttachment);
+        } catch (error) {
+            showToast(error.message, "error");
+            return;
+        }
+    }
+
     socket.emit(
         "private message",
         {
@@ -2037,13 +2169,16 @@ function sendMessage() {
                 selectedUserId,
 
             message:
-                text
+                text,
+
+            attachment
 
         }
     );
 
 
     input.value = "";
+    clearAttachment();
 
 
     /*

@@ -8,6 +8,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
+const crypto = require("crypto");
 
 const User = require("./models/User");
 const Message = require("./models/Message");
@@ -31,6 +33,9 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+const uploadDirectory = path.join(__dirname, "uploads");
+
+fs.mkdirSync(uploadDirectory, { recursive: true });
 
 
 /*
@@ -49,6 +54,59 @@ app.use(
     express.static(
         path.join(__dirname, "public")
     )
+);
+
+app.use("/uploads", express.static(uploadDirectory));
+
+
+/*
+==================================================
+UPLOAD ATTACHMENT
+==================================================
+*/
+
+app.post(
+    "/api/upload",
+    authenticateToken,
+    express.raw({ type: () => true, limit: "50mb" }),
+    async (req, res) => {
+
+        try {
+
+            const originalName = decodeURIComponent(
+                req.headers["x-file-name"] || "attachment"
+            ).replace(/[\\/]/g, "_");
+
+            const extension = path.extname(originalName).toLowerCase();
+            const documentExtension =
+                [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt"].includes(extension);
+
+            const allowedType =
+                /^(image\/|video\/|application\/pdf$|application\/msword$|application\/vnd\.openxmlformats-officedocument\.|text\/plain$)/.test(req.headers["content-type"] || "") || documentExtension;
+
+            if (!allowedType || !req.body || !req.body.length) {
+                return res.status(400).json({
+                    message: "Unsupported or empty file"
+                });
+            }
+
+            const storedName = `${crypto.randomBytes(16).toString("hex")}${extension}`;
+            const storedPath = path.join(uploadDirectory, storedName);
+
+            await fs.promises.writeFile(storedPath, req.body);
+
+            return res.status(201).json({
+                name: originalName,
+                type: req.headers["content-type"],
+                size: req.body.length,
+                url: `/uploads/${storedName}`
+            });
+
+        } catch (error) {
+            console.error("Upload error:", error);
+            return res.status(500).json({ message: "Unable to upload file" });
+        }
+    }
 );
 
 
@@ -1089,13 +1147,14 @@ io.on(
 
                     const {
                         receiverId,
-                        message
+                        message,
+                        attachment
                     } = data;
 
 
                     if (
                         !receiverId ||
-                        !message
+                        (!message && !attachment)
                     ) {
 
                         return;
@@ -1104,10 +1163,10 @@ io.on(
 
 
                     const cleanMessage =
-                        message.trim();
+                        (message || "").trim();
 
 
-                    if (!cleanMessage) {
+                    if (!cleanMessage && !attachment) {
 
                         return;
 
@@ -1155,7 +1214,10 @@ io.on(
                                 receiverId,
 
                             message:
-                                cleanMessage
+                                cleanMessage,
+
+                            attachment:
+                                attachment || undefined
 
                         });
 
@@ -1184,6 +1246,9 @@ io.on(
 
                         message:
                             cleanMessage,
+
+                        attachment:
+                            attachment || null,
 
                         read:
                             false,
@@ -1440,8 +1505,10 @@ io.on(
                             _id:
                                 messageId,
 
-                            sender:
-                                userId
+                            $or: [
+                                { sender: userId },
+                                { receiver: userId }
+                            ]
 
                         });
 
@@ -1461,44 +1528,19 @@ io.on(
                     });
 
 
-                    socket.emit(
-                        "message deleted",
-                        {
-                            messageId
+                    const participants = new Set([
+                        message.sender.toString(),
+                        message.receiver.toString()
+                    ]);
+
+                    for (const participantId of participants) {
+                        const participantSocket = onlineUsers.get(participantId);
+
+                        if (participantSocket) {
+                            io.to(participantSocket).emit("message deleted", { messageId });
+                            io.to(participantSocket).emit("conversation updated");
                         }
-                    );
-
-
-                    const receiverSocket =
-                        onlineUsers.get(
-                            message.receiver.toString()
-                        );
-
-
-                    if (receiverSocket) {
-
-                        io.to(
-                            receiverSocket
-                        ).emit(
-                            "message deleted",
-                            {
-                                messageId
-                            }
-                        );
-
-
-                        io.to(
-                            receiverSocket
-                        ).emit(
-                            "conversation updated"
-                        );
-
                     }
-
-
-                    socket.emit(
-                        "conversation updated"
-                    );
 
 
                 } catch (error) {
