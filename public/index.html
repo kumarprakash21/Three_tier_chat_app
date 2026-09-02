@@ -386,7 +386,7 @@
                 <div id="profile-preview" class="profile-preview">?</div>
                 <label class="upload-button" for="profile-picture-input">Change photo</label>
                 <input id="profile-picture-input" type="file" accept="image/png,image/jpeg,image/webp">
-                <small>JPG, PNG or WebP up to 1 MB</small>
+                <small>Select a photo, then crop it before saving</small>
             </div>
 
             <label class="profile-label" for="display-name-input">Display name</label>
@@ -430,6 +430,25 @@
             <div class="profile-card-actions">
                 <button class="modal-button modal-cancel" type="button" onclick="closePasswordForm()">Cancel</button>
                 <button class="modal-button modal-confirm" type="button" onclick="changePassword()">Update password</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="crop-modal" class="app-modal" aria-hidden="true">
+        <div class="crop-card" role="dialog" aria-modal="true" aria-labelledby="crop-title">
+            <div class="profile-card-header">
+                <div>
+                    <h3 id="crop-title">Crop your photo</h3>
+                    <p>Drag the image to position it and adjust the zoom.</p>
+                </div>
+                <button class="profile-close" type="button" onclick="closeCropper()" aria-label="Close crop editor">&times;</button>
+            </div>
+            <canvas id="crop-canvas" width="320" height="320"></canvas>
+            <label class="crop-zoom-label" for="crop-zoom">Zoom</label>
+            <input id="crop-zoom" class="crop-zoom" type="range" min="1" max="3" step="0.01" value="1">
+            <div class="profile-card-actions">
+                <button class="modal-button modal-cancel" type="button" onclick="closeCropper()">Cancel</button>
+                <button class="modal-button modal-confirm" type="button" onclick="applyCrop()">Use this crop</button>
             </div>
         </div>
     </div>

@@ -41,7 +41,9 @@ MIDDLEWARE
 
 app.use(cors());
 
-app.use(express.json());
+// Profile pictures are sent as Base64 JSON. A 1 MB image expands when
+// encoded, so the request limit must be larger than the image limit.
+app.use(express.json({ limit: "2mb" }));
 
 app.use(
     express.static(
@@ -471,6 +473,12 @@ app.patch(
                 { $set: update },
                 { new: true, runValidators: true }
             ).select("username displayName bio profilePicture notifications lastSeen");
+
+            io.emit("profile updated", {
+                userId: req.user.id,
+                displayName: user.displayName,
+                profilePicture: user.profilePicture
+            });
 
             return res.json(user);
 
@@ -1778,6 +1786,19 @@ START SERVER
 
 //     }
 // );
+
+// Return a useful API response instead of an HTML stack trace for oversized
+// JSON requests, including profile-picture uploads.
+app.use((error, req, res, next) => {
+
+    if (error.type === "entity.too.large") {
+        return res.status(413).json({
+            message: "Uploaded data is too large"
+        });
+    }
+
+    return next(error);
+});
 
 //To access into azure server
 server.listen(

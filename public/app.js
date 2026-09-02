@@ -23,6 +23,14 @@ let currentProfile = {
     profilePicture: ""
 };
 
+let cropImage = null;
+let cropZoom = 1;
+let cropOffsetX = 0;
+let cropOffsetY = 0;
+let cropDragging = false;
+let cropStartX = 0;
+let cropStartY = 0;
+
 
 /*
 ==================================================
@@ -206,32 +214,108 @@ document.getElementById("profile-picture-input").addEventListener("change", even
 
     if (!file) return;
 
+    if (!file.type.startsWith("image/")) {
+        showToast("Please select an image file", "error");
+        event.target.value = "";
+        return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
-        const preview = document.getElementById("profile-preview");
-        preview.style.backgroundImage = `url("${reader.result}")`;
-        preview.classList.add("has-image");
+        cropImage = new Image();
+        cropImage.onload = () => {
+            cropZoom = 1;
+            cropOffsetX = 0;
+            cropOffsetY = 0;
+            drawCrop();
+            document.getElementById("crop-modal").classList.add("open");
+            document.getElementById("crop-modal").setAttribute("aria-hidden", "false");
+        };
+        cropImage.src = reader.result;
     };
     reader.readAsDataURL(file);
 });
 
+document.getElementById("crop-zoom").addEventListener("input", event => {
+    cropZoom = Number(event.target.value);
+    drawCrop();
+});
+
+const cropCanvas = document.getElementById("crop-canvas");
+
+cropCanvas.addEventListener("pointerdown", event => {
+    cropDragging = true;
+    cropStartX = event.clientX - cropOffsetX;
+    cropStartY = event.clientY - cropOffsetY;
+    cropCanvas.setPointerCapture(event.pointerId);
+});
+
+cropCanvas.addEventListener("pointermove", event => {
+    if (!cropDragging) return;
+    cropOffsetX = event.clientX - cropStartX;
+    cropOffsetY = event.clientY - cropStartY;
+    drawCrop();
+});
+
+cropCanvas.addEventListener("pointerup", () => {
+    cropDragging = false;
+});
+
+function drawCrop() {
+
+    if (!cropImage) return;
+
+    const context = cropCanvas.getContext("2d");
+    const canvasSize = cropCanvas.width;
+    const baseScale = Math.max(
+        canvasSize / cropImage.width,
+        canvasSize / cropImage.height
+    );
+    const scale = baseScale * cropZoom;
+    const imageWidth = cropImage.width * scale;
+    const imageHeight = cropImage.height * scale;
+
+    const maxX = Math.max(0, (imageWidth - canvasSize) / 2);
+    const maxY = Math.max(0, (imageHeight - canvasSize) / 2);
+    cropOffsetX = Math.max(-maxX, Math.min(maxX, cropOffsetX));
+    cropOffsetY = Math.max(-maxY, Math.min(maxY, cropOffsetY));
+
+    context.clearRect(0, 0, canvasSize, canvasSize);
+    context.fillStyle = "#0f172a";
+    context.fillRect(0, 0, canvasSize, canvasSize);
+    context.drawImage(
+        cropImage,
+        (canvasSize - imageWidth) / 2 + cropOffsetX,
+        (canvasSize - imageHeight) / 2 + cropOffsetY,
+        imageWidth,
+        imageHeight
+    );
+}
+
+function closeCropper() {
+    cropImage = null;
+    document.getElementById("profile-picture-input").value = "";
+    const modal = document.getElementById("crop-modal");
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function applyCrop() {
+
+    if (!cropImage) return;
+
+    const croppedImage = cropCanvas.toDataURL("image/jpeg", 0.88);
+    const preview = document.getElementById("profile-preview");
+    preview.style.backgroundImage = `url("${croppedImage}")`;
+    preview.classList.add("has-image");
+    currentProfile.profilePicture = croppedImage;
+    closeCropper();
+    showToast("Photo cropped. Save your profile to apply it.", "success");
+}
+
 async function saveProfile() {
 
-    const file = document.getElementById("profile-picture-input").files[0];
     let profilePicture = currentProfile.profilePicture || "";
-
-    if (file) {
-        if (file.size > 1000000) {
-            showToast("Profile picture must be under 1 MB", "error");
-            return;
-        }
-
-        profilePicture = await new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.readAsDataURL(file);
-        });
-    }
 
     try {
         const response = await profileRequest("/api/profile", {
@@ -309,6 +393,12 @@ document.getElementById("app-modal").addEventListener("click", event => {
 
 document.addEventListener("keydown", event => {
     const modal = document.getElementById("app-modal");
+    const cropModal = document.getElementById("crop-modal");
+
+    if (cropModal.classList.contains("open") && event.key === "Escape") {
+        closeCropper();
+        return;
+    }
 
     if (!modal.classList.contains("open")) return;
 
@@ -966,6 +1056,27 @@ function connectSocket() {
         () => loadUsers()
     );
 
+    socket.on(
+        "profile updated",
+        data => {
+            const user = users.find(item => item.id === data.userId);
+
+            if (user) {
+                user.displayName = data.displayName;
+                user.profilePicture = data.profilePicture;
+                renderUsers(users);
+            }
+
+            if (selectedUserId === data.userId) {
+                const chatAvatar = document.getElementById("chat-avatar");
+                chatAvatar.style.backgroundImage = data.profilePicture
+                    ? `url("${data.profilePicture}")`
+                    : "";
+                chatAvatar.classList.toggle("has-image", Boolean(data.profilePicture));
+            }
+        }
+    );
+
 }
 
 
@@ -1110,7 +1221,11 @@ function renderUsers(
                     .toUpperCase();
 
             if (user.profilePicture) {
-                avatar.style.backgroundImage = `url("${user.profilePicture}")`;
+                const avatarImage = document.createElement("img");
+                avatarImage.src = user.profilePicture;
+                avatarImage.alt = `${user.username} profile picture`;
+                avatar.textContent = "";
+                avatar.appendChild(avatarImage);
                 avatar.classList.add("has-image");
             }
 
@@ -1396,9 +1511,15 @@ async function openChat(
     document.getElementById(
         "chat-avatar"
     ).textContent =
-        user.username
+        (user.displayName || user.username)
             .charAt(0)
             .toUpperCase();
+
+    const chatAvatar = document.getElementById("chat-avatar");
+    chatAvatar.style.backgroundImage = user.profilePicture
+        ? `url("${user.profilePicture}")`
+        : "";
+    chatAvatar.classList.toggle("has-image", Boolean(user.profilePicture));
 
 
     updateSelectedUserStatus();
