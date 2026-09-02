@@ -338,6 +338,109 @@ app.post(
 
 /*
 ==================================================
+DELETE ACCOUNT
+==================================================
+*/
+
+app.delete(
+    "/api/account",
+    authenticateToken,
+    async (req, res) => {
+
+        try {
+
+            const userId = req.user.id;
+            const user = await User.findById(userId);
+
+            if (!user) {
+                return res.status(404).json({
+                    message: "Account not found"
+                });
+            }
+
+            await Message.deleteMany({
+                $or: [
+                    { sender: userId },
+                    { receiver: userId }
+                ]
+            });
+
+            await User.deleteOne({ _id: userId });
+
+            const socketId = onlineUsers.get(userId);
+
+            if (socketId) {
+                io.to(socketId).emit("account deleted");
+                io.sockets.sockets.get(socketId)?.disconnect(true);
+                onlineUsers.delete(userId);
+            }
+
+            io.emit("user deleted", { userId });
+            sendOnlineUsers();
+
+            return res.json({
+                message: "Account deleted successfully"
+            });
+
+        } catch (error) {
+
+            console.error("Delete account error:", error);
+
+            return res.status(500).json({
+                message: "Unable to delete account"
+            });
+
+        }
+    }
+);
+
+
+/*
+==================================================
+REMOVE CHAT
+==================================================
+*/
+
+app.delete(
+    "/api/chats/:userId",
+    authenticateToken,
+    async (req, res) => {
+
+        try {
+
+            const userId = req.user.id;
+            const otherUserId = req.params.userId;
+
+            if (userId === otherUserId) {
+                return res.status(400).json({
+                    message: "You cannot remove yourself"
+                });
+            }
+
+            await User.findByIdAndUpdate(
+                userId,
+                { $addToSet: { hiddenChats: otherUserId } }
+            );
+
+            return res.json({
+                message: "Chat removed from your list"
+            });
+
+        } catch (error) {
+
+            console.error("Remove chat error:", error);
+
+            return res.status(500).json({
+                message: "Unable to remove chat"
+            });
+
+        }
+    }
+);
+
+
+/*
+==================================================
 GET USERS
 
 V2.1
@@ -362,6 +465,15 @@ app.get(
             const currentUserId =
                 req.user.id;
 
+            const currentUser =
+                await User.findById(
+                    currentUserId,
+                    "hiddenChats"
+                );
+
+            const hiddenChats =
+                currentUser?.hiddenChats || [];
+
 
             /*
             Get all users except current user
@@ -371,8 +483,8 @@ app.get(
                 await User.find(
                     {
                         _id: {
-                            $ne:
-                                currentUserId
+                            $ne: currentUserId,
+                            $nin: hiddenChats
                         }
                     },
                     "username lastSeen"
@@ -450,7 +562,7 @@ app.get(
                             currentUserId,
 
                         read:
-                            true
+                            false
 
                     });
 
@@ -915,6 +1027,17 @@ io.on(
 
                         });
 
+                    await Promise.all([
+                        User.findByIdAndUpdate(
+                            userId,
+                            { $pull: { hiddenChats: receiverId } }
+                        ),
+                        User.findByIdAndUpdate(
+                            receiverId,
+                            { $pull: { hiddenChats: userId } }
+                        )
+                    ]);
+
 
                     const messageData = {
 
@@ -1289,6 +1412,16 @@ io.on(
 
 
                     if (!cleanMessage) {
+
+                        return;
+
+                    }
+
+                    if (
+                        cleanMessage.length >
+                        2000 ||
+                        !messageId
+                    ) {
 
                         return;
 

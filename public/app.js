@@ -41,6 +41,94 @@ const typingIndicator =
     document.getElementById("typing-indicator");
 
 
+function showToast(message, type = "info") {
+
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    document.getElementById("toast-container").appendChild(toast);
+
+    setTimeout(() => toast.classList.add("visible"), 10);
+
+    setTimeout(() => {
+        toast.classList.remove("visible");
+        setTimeout(() => toast.remove(), 250);
+    }, 3500);
+}
+
+// Keeps existing authentication messages in the same in-app notification style.
+function alert(message) {
+    showToast(message, "info");
+}
+
+function closeModal() {
+    const modal = document.getElementById("app-modal");
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function showActionModal({ title, message, inputValue = null, confirmLabel = "Confirm", danger = false }) {
+
+    return new Promise(resolve => {
+
+        const modal = document.getElementById("app-modal");
+        const input = document.getElementById("modal-input");
+        const confirmButton = document.getElementById("modal-confirm");
+        const cancelButton = document.getElementById("modal-cancel");
+
+        document.getElementById("modal-title").textContent = title;
+        document.getElementById("modal-message").textContent = message;
+        confirmButton.textContent = confirmLabel;
+        confirmButton.classList.toggle("modal-danger", danger);
+        input.value = inputValue === null ? "" : inputValue;
+        input.style.display = inputValue === null ? "none" : "block";
+
+        modal.classList.add("open");
+        modal.setAttribute("aria-hidden", "false");
+
+        const finish = value => {
+            closeModal();
+            confirmButton.onclick = null;
+            cancelButton.onclick = null;
+            resolve(value);
+        };
+
+        confirmButton.onclick = () => finish(inputValue === null ? true : input.value);
+        cancelButton.onclick = () => finish(null);
+
+        if (inputValue !== null) {
+            input.focus();
+            input.select();
+        } else {
+            confirmButton.focus();
+        }
+    });
+}
+
+document.getElementById("app-modal").addEventListener("click", event => {
+    if (event.target.id === "app-modal") {
+        document.getElementById("modal-cancel").click();
+    }
+});
+
+document.addEventListener("keydown", event => {
+    const modal = document.getElementById("app-modal");
+
+    if (!modal.classList.contains("open")) return;
+
+    if (event.key === "Escape") {
+        document.getElementById("modal-cancel").click();
+    }
+
+    if (
+        event.key === "Enter" &&
+        document.activeElement === document.getElementById("modal-input")
+    ) {
+        document.getElementById("modal-confirm").click();
+    }
+});
+
+
 /*
 ==================================================
 SHOW LOGIN
@@ -627,6 +715,16 @@ function connectSocket() {
                     text.textContent =
                         data.message;
 
+                    let edited =
+                        element.querySelector(".edited");
+
+                    if (!edited) {
+                        edited = document.createElement("span");
+                        edited.className = "edited";
+                        edited.textContent = "edited";
+                        element.querySelector(".message-time")?.appendChild(edited);
+                    }
+
                 }
 
             }
@@ -635,6 +733,16 @@ function connectSocket() {
             loadUsers();
 
         }
+    );
+
+    socket.on(
+        "account deleted",
+        () => logout(false)
+    );
+
+    socket.on(
+        "user deleted",
+        () => loadUsers()
     );
 
 }
@@ -908,6 +1016,16 @@ function renderUsers(
                 lastMessage
             );
 
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.className = "remove-chat-button";
+            removeButton.innerHTML = "&#x2715;";
+            removeButton.title = `Remove ${user.username} from chats`;
+            removeButton.setAttribute("aria-label", `Remove ${user.username} from chats`);
+            removeButton.addEventListener("click", event => {
+                event.stopPropagation();
+                removeChat(user);
+            });
 
             /*
             UNREAD BADGE
@@ -959,6 +1077,8 @@ function renderUsers(
                 );
 
             }
+
+            item.appendChild(removeButton);
 
 
             /*
@@ -1415,9 +1535,127 @@ function addMessage(data) {
         div
     );
 
+    if (isMyMessage && data.id) {
+
+        const actions = document.createElement("div");
+        actions.className = "message-actions";
+
+        const editButton = document.createElement("button");
+        editButton.type = "button";
+        editButton.className = "message-action";
+        editButton.textContent = "Edit";
+        editButton.onclick = () => editMessage(data.id, data.message);
+
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "message-action message-action-danger";
+        deleteButton.textContent = "Delete";
+        deleteButton.onclick = () => deleteMessage(data.id);
+
+        actions.append(editButton, deleteButton);
+        div.appendChild(actions);
+    }
+
 
     scrollToBottom();
 
+}
+
+
+async function removeChat(user) {
+
+    const confirmed = await showActionModal({
+        title: "Remove chat?",
+        message: `${user.username} will be removed from your chat list. Your message history will be kept.`,
+        confirmLabel: "Remove",
+        danger: true
+    });
+
+    if (!confirmed) return;
+
+    const token = localStorage.getItem("token");
+
+    try {
+
+        const response = await fetch(`/api/chats/${user.id}`, {
+            method: "DELETE",
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            showToast(data.message || "Unable to remove chat", "error");
+            return;
+        }
+
+        if (selectedUserId === user.id) {
+            selectedUserId = "";
+            selectedUsername = "";
+            input.value = "";
+            input.disabled = true;
+            input.placeholder = "Select a user first...";
+            document.getElementById("send-button").disabled = true;
+            document.getElementById("chat-username").textContent = "Select a user";
+            document.getElementById("chat-status").textContent = "Choose someone to start chatting";
+            messages.innerHTML = `<div class="empty-chat"><div class="empty-icon">ðŸ’¬</div><h3>Welcome to ChatApp</h3><p>Select a user from the left to start chatting.</p></div>`;
+        }
+
+        showToast(`${user.username} removed from your chats`, "success");
+        loadUsers();
+
+    } catch (error) {
+        console.error("Remove chat error:", error);
+        showToast("Unable to connect to server", "error");
+    }
+}
+
+
+async function editMessage(messageId, currentMessage) {
+
+    if (!socket) return;
+
+    const updatedMessage = await showActionModal({
+        title: "Edit message",
+        message: "Update your message below.",
+        inputValue: currentMessage,
+        confirmLabel: "Save"
+    });
+
+    if (updatedMessage === null) return;
+
+    const cleanMessage = updatedMessage.trim();
+
+    if (!cleanMessage) {
+        showToast("Message cannot be empty", "error");
+        return;
+    }
+
+    if (cleanMessage.length > 2000) {
+        showToast("Message must be 2000 characters or fewer", "error");
+        return;
+    }
+
+    socket.emit("edit message", {
+        messageId,
+        message: cleanMessage
+    });
+}
+
+async function deleteMessage(messageId) {
+
+    const confirmed = await showActionModal({
+        title: "Delete message?",
+        message: "This message will be removed for both participants.",
+        confirmLabel: "Delete",
+        danger: true
+    });
+
+    if (socket && confirmed) {
+        socket.emit("delete message", messageId);
+    }
 }
 
 
@@ -1753,7 +1991,7 @@ LOGOUT
 ==================================================
 */
 
-function logout() {
+function logout(showLoginPage = true) {
 
     if (socket) {
 
@@ -1789,9 +2027,11 @@ function logout() {
     ).style.display = "none";
 
 
-    document.getElementById(
-        "login-page"
-    ).style.display = "flex";
+    if (showLoginPage) {
+        document.getElementById(
+            "login-page"
+        ).style.display = "flex";
+    }
 
 
     input.value = "";
@@ -1828,6 +2068,47 @@ function logout() {
 }
 
 
+async function deleteAccount() {
+
+    const confirmed = await showActionModal({
+        title: "Delete account?",
+        message: "Your account and all messages will be permanently deleted.",
+        confirmLabel: "Delete account",
+        danger: true
+    });
+
+    if (!confirmed) {
+        return;
+    }
+
+    const token = localStorage.getItem("token");
+
+    try {
+
+        const response = await fetch("/api/account", {
+            method: "DELETE",
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+        showToast(data.message || "Unable to delete account", "error");
+            return;
+        }
+
+        showToast("Your account has been deleted", "success");
+        logout();
+
+    } catch (error) {
+        console.error("Delete account error:", error);
+        showToast("Unable to connect to server", "error");
+    }
+}
+
+
 /*
 ==================================================
 AUTO LOGIN
@@ -1840,6 +2121,8 @@ restore the session.
 window.addEventListener(
     "DOMContentLoaded",
     () => {
+
+        document.documentElement.classList.remove("app-loading");
 
         const token =
             localStorage.getItem(

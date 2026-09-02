@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <script>
+        document.documentElement.classList.add("app-loading");
+    </script>
+
     <title>ChatApp V2.1</title>
 
     <link rel="stylesheet" href="style.css">
@@ -142,6 +146,7 @@
 
 </div>
 
+                <div class="header-actions">
                 <button
                     class="logout-button"
                     onclick="logout()"
@@ -149,6 +154,17 @@
                 >
                     🚪
                 </button>
+
+                <button
+                    class="delete-account-icon"
+                    onclick="deleteAccount()"
+                    title="Delete account"
+                    aria-label="Delete account"
+                >
+                    ×
+                </button>
+
+                </div>
 
             </div>
 
@@ -331,6 +347,21 @@
 
         </div>
 
+    </div>
+
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <div id="app-modal" class="app-modal" aria-hidden="true">
+        <div class="modal-card" role="dialog" aria-modal="true">
+            <h3 id="modal-title">Confirm action</h3>
+            <p id="modal-message"></p>
+            <input id="modal-input" class="modal-input" type="text" autocomplete="off">
+            <div class="modal-actions">
+                <button id="modal-cancel" class="modal-button modal-cancel" type="button">Cancel</button>
+                <button id="modal-confirm" class="modal-button modal-confirm" type="button">Confirm</button>
+            </div>
+        </div>
     </div>
 
 
