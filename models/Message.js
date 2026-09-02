@@ -21,7 +21,13 @@ const messageSchema = new mongoose.Schema(
         receiver: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true
+            required: false
+        },
+
+        group: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Group",
+            required: false
         },
 
         message: {
@@ -36,6 +42,20 @@ const messageSchema = new mongoose.Schema(
             type: attachmentSchema,
             default: undefined
         },
+
+        replyTo: {
+            messageId: mongoose.Schema.Types.ObjectId,
+            senderName: String,
+            message: String
+        },
+
+        reactions: [{
+            user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+            emoji: String
+        }],
+
+        pinned: { type: Boolean, default: false },
+        pinnedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 
         read: {
             type: Boolean,

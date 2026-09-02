@@ -199,6 +199,7 @@
 
             <div class="chat-list-header">
                 <span>CHATS</span>
+                <button id="create-group-button" class="list-action" type="button">+ Group</button>
             </div>
 
             <div
@@ -211,6 +212,10 @@
                 </div>
 
             </div>
+
+
+            <div class="chat-list-header group-heading"><span>GROUPS</span></div>
+            <div id="group-list" class="user-list group-list"></div>
 
 
             <!-- SIDEBAR FOOTER -->
@@ -267,6 +272,11 @@
 
                     </div>
 
+                </div>
+
+                <div class="group-actions">
+                    <button id="mute-group-button" class="chat-header-action" type="button" style="display:none">Mute</button>
+                    <button id="manage-group-button" class="chat-header-action" type="button" style="display:none">Members</button>
                 </div>
 
             </div>
@@ -456,6 +466,26 @@
             <div class="profile-card-actions">
                 <button class="modal-button modal-cancel" type="button" onclick="closeCropper()">Cancel</button>
                 <button class="modal-button modal-confirm" type="button" onclick="applyCrop()">Use this crop</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="group-members-modal" class="app-modal" aria-hidden="true">
+        <div class="profile-card" role="dialog" aria-modal="true" aria-labelledby="members-title">
+            <div class="profile-card-header">
+                <div>
+                    <h3 id="members-title">Group members</h3>
+                    <p id="members-subtitle">Manage this group.</p>
+                </div>
+                <button class="profile-close" type="button" onclick="closeGroupMembers()" aria-label="Close members">&times;</button>
+            </div>
+            <div id="group-members-list" class="group-members-list"></div>
+            <div id="member-management-form" class="member-management-form">
+                <input id="member-username-input" class="profile-input" type="text" placeholder="Enter username">
+                <div class="profile-card-actions">
+                    <button class="modal-button modal-cancel" type="button" onclick="updateGroupMemberFromInput('remove')">Remove</button>
+                    <button class="modal-button modal-confirm" type="button" onclick="updateGroupMemberFromInput('add')">Add member</button>
+                </div>
             </div>
         </div>
     </div>

@@ -13,6 +13,7 @@ const crypto = require("crypto");
 
 const User = require("./models/User");
 const Message = require("./models/Message");
+const Group = require("./models/Group");
 const authenticateToken = require("./middleware/auth");
 
 
@@ -1072,6 +1073,95 @@ io.use(
 
 /*
 ==================================================
+GROUP API
+==================================================
+*/
+
+app.get("/api/groups", authenticateToken, async (req, res) => {
+    try {
+        const groups = await Group.find({ members: req.user.id })
+            .populate("members", "username displayName profilePicture")
+            .sort({ updatedAt: -1 });
+        res.json(groups.map(group => ({
+            ...group.toObject(),
+            isAdmin: group.admins.some(id => id.toString() === req.user.id),
+            muted: group.mutedBy.some(id => id.toString() === req.user.id)
+        })));
+    } catch (error) {
+        console.error("Get groups error:", error);
+        res.status(500).json({ message: "Unable to load groups" });
+    }
+});
+
+app.post("/api/groups", authenticateToken, async (req, res) => {
+    try {
+        const name = String(req.body.name || "").trim();
+        const memberIds = Array.isArray(req.body.memberIds) ? req.body.memberIds : [];
+        if (!name || name.length > 60) return res.status(400).json({ message: "Group name is required" });
+
+        const members = [...new Set([req.user.id, ...memberIds])];
+        const group = await Group.create({
+            name,
+            description: String(req.body.description || "").trim().slice(0, 160),
+            owner: req.user.id,
+            admins: [req.user.id],
+            members
+        });
+        res.status(201).json(group);
+    } catch (error) {
+        console.error("Create group error:", error);
+        res.status(500).json({ message: "Unable to create group" });
+    }
+});
+
+app.get("/api/groups/:groupId/messages", authenticateToken, async (req, res) => {
+    try {
+        const group = await Group.findOne({ _id: req.params.groupId, members: req.user.id });
+        if (!group) return res.status(403).json({ message: "You are not a group member" });
+        const messages = await Message.find({ group: group._id }).sort({ createdAt: 1 });
+        res.json(messages);
+    } catch (error) {
+        res.status(500).json({ message: "Unable to load group messages" });
+    }
+});
+
+app.patch("/api/groups/:groupId/members", authenticateToken, async (req, res) => {
+    try {
+        const { userId, action } = req.body;
+        const group = await Group.findOne({ _id: req.params.groupId, admins: req.user.id });
+        if (!group) return res.status(403).json({ message: "Only group admins can manage members" });
+        if (action === "add") group.members.addToSet(userId);
+        else if (action === "remove" && group.owner.toString() !== userId) {
+            group.members.pull(userId);
+            group.admins.pull(userId);
+        }
+        else if (action === "promote" && group.members.some(id => id.toString() === userId)) group.admins.addToSet(userId);
+        else if (action === "demote" && group.owner.toString() !== userId) group.admins.pull(userId);
+        else return res.status(400).json({ message: "Invalid member action" });
+        await group.save();
+        io.emit("group updated", { groupId: group._id.toString() });
+        res.json(group);
+    } catch (error) {
+        res.status(500).json({ message: "Unable to update group members" });
+    }
+});
+
+app.patch("/api/groups/:groupId/mute", authenticateToken, async (req, res) => {
+    try {
+        const group = await Group.findOne({ _id: req.params.groupId, members: req.user.id });
+        if (!group) return res.status(403).json({ message: "You are not a group member" });
+        if (req.body.muted) group.mutedBy.addToSet(req.user.id);
+        else group.mutedBy.pull(req.user.id);
+        await group.save();
+        res.json({ muted: req.body.muted === true });
+    } catch (error) {
+        res.status(500).json({ message: "Unable to update mute setting" });
+    }
+});
+
+
+/*
+==================================================
 SOCKET CONNECTION
 ==================================================
 */
@@ -1131,6 +1221,81 @@ io.on(
 
 
         sendOnlineUsers();
+
+        socket.on("join groups", async groupIds => {
+            if (!Array.isArray(groupIds)) return;
+            const groups = await Group.find({ _id: { $in: groupIds }, members: userId }, "_id");
+            groups.forEach(group => socket.join(`group:${group._id}`));
+        });
+
+        socket.on("group message", async data => {
+            try {
+                const group = await Group.findOne({ _id: data.groupId, members: userId });
+                const cleanMessage = String(data.message || "").trim();
+                if (!group || (!cleanMessage && !data.attachment) || cleanMessage.length > 2000) return;
+
+                const newMessage = await Message.create({
+                    sender: userId,
+                    group: group._id,
+                    message: cleanMessage,
+                    attachment: data.attachment || undefined,
+                    replyTo: data.replyTo || undefined
+                });
+
+                await Group.updateOne({ _id: group._id }, { $set: { updatedAt: new Date() } });
+
+                io.to(`group:${group._id}`).emit("group message", {
+                    id: newMessage._id.toString(),
+                    groupId: group._id.toString(),
+                    sender: userId,
+                    senderName: username,
+                    message: cleanMessage,
+                    attachment: data.attachment || null,
+                    replyTo: data.replyTo || null,
+                    reactions: [],
+                    pinned: false,
+                    timestamp: newMessage.createdAt
+                });
+            } catch (error) {
+                console.error("Group message error:", error);
+            }
+        });
+
+        socket.on("message reaction", async data => {
+            try {
+                const message = await Message.findOne({ _id: data.messageId });
+                if (!message || !message.group) return;
+                const group = await Group.findOne({ _id: message.group, members: userId });
+                if (!group || !data.emoji) return;
+                message.reactions = message.reactions.filter(reaction => reaction.user.toString() !== userId);
+                message.reactions.push({ user: userId, emoji: String(data.emoji).slice(0, 8) });
+                await message.save();
+                io.to(`group:${group._id}`).emit("message reaction", {
+                    messageId: message._id.toString(),
+                    reactions: message.reactions
+                });
+            } catch (error) {
+                console.error("Reaction error:", error);
+            }
+        });
+
+        socket.on("pin message", async data => {
+            try {
+                const message = await Message.findOne({ _id: data.messageId });
+                if (!message || !message.group) return;
+                const group = await Group.findOne({ _id: message.group, members: userId });
+                if (!group || !group.admins.some(id => id.toString() === userId)) return;
+                message.pinned = data.pinned !== false;
+                message.pinnedBy = message.pinned ? userId : undefined;
+                await message.save();
+                io.to(`group:${group._id}`).emit("message pinned", {
+                    messageId: message._id.toString(),
+                    pinned: message.pinned
+                });
+            } catch (error) {
+                console.error("Pin message error:", error);
+            }
+        });
 
 
         /*

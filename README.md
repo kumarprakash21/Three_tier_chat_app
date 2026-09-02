@@ -43,6 +43,20 @@ The application includes authentication, persistent private messages, online pre
 - Attachment uploads use server-side storage instead of storing binary data in MongoDB.
 - Empty attachment-only messages are supported.
 
+### V2.4 Groups and message interactions
+
+- Create group conversations from the sidebar.
+- Group owners are automatically made group administrators.
+- Admins can add or remove members by username.
+- Every group member can view the complete member list.
+- Admins can promote members to admin or remove admin privileges.
+- Group members can mute or unmute a group for their own account.
+- Group messages are delivered in real time through Socket.IO rooms.
+- Reply to group messages with visible reply context.
+- Add quick reactions to group messages.
+- Group administrators can pin and unpin messages.
+- Pinned messages are highlighted for group members.
+
 ### Private real-time chat
 
 - One-to-one private conversations between registered users.
@@ -139,6 +153,11 @@ The hidden chat relationships are stored in the user's `hiddenChats` array.
 | `PATCH` | `/api/profile` | Yes | Update display name, bio, profile picture, and notifications |
 | `PATCH` | `/api/password` | Yes | Change the authenticated user's password |
 | `POST` | `/api/upload` | Yes | Upload an image, video, PDF, or supported document |
+| `GET` | `/api/groups` | Yes | Get groups for the authenticated user |
+| `POST` | `/api/groups` | Yes | Create a group conversation |
+| `GET` | `/api/groups/:groupId/messages` | Yes | Load group message history |
+| `PATCH` | `/api/groups/:groupId/members` | Yes | Add or remove group members as an admin |
+| `PATCH` | `/api/groups/:groupId/mute` | Yes | Mute or unmute a group for the current user |
 | `DELETE` | `/api/account` | Yes | Permanently delete the current account and its messages |
 | `DELETE` | `/api/chats/:userId` | Yes | Hide a user from the current user's chat list |
 

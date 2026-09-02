@@ -441,6 +441,38 @@ html.app-loading body {
     letter-spacing: 1px;
 }
 
+.chat-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.list-action,
+.chat-header-action {
+    border: 0;
+    border-radius: 6px;
+    padding: 5px 8px;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.list-action:hover,
+.chat-header-action:hover {
+    background: #dbeafe;
+}
+
+.group-heading {
+    margin-top: 8px;
+}
+
+.group-list {
+    flex: 0 1 190px;
+    min-height: 45px;
+}
+
 .user-list {
 
     flex: 1;
@@ -707,6 +739,12 @@ html.app-loading body {
 
     border-bottom:
         1px solid #e2e8f0;
+    justify-content: space-between;
+}
+
+.group-actions {
+    display: flex;
+    gap: 7px;
 }
 
 .chat-user-info {
@@ -903,6 +941,26 @@ html.app-loading body {
     margin-left: 5px;
 
     opacity: 0.6;
+}
+
+.message-reply {
+    margin: 5px 0;
+    padding: 5px 8px;
+    border-left: 3px solid #60a5fa;
+    border-radius: 4px;
+    background: rgba(148,163,184,0.15);
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+.reaction-bar {
+    margin-top: 5px;
+    font-size: 14px;
+}
+
+.pinned-message {
+    outline: 2px solid #f59e0b;
+    outline-offset: 2px;
 }
 
 .message-actions {
@@ -1570,6 +1628,68 @@ html.app-loading body {
     justify-content: flex-end;
     gap: 10px;
     margin-top: 23px;
+}
+
+.group-members-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 3px 0;
+}
+
+.group-member-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 12px;
+}
+
+.member-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: white;
+    font-weight: 700;
+}
+
+.member-name {
+    flex: 1;
+    font-weight: 600;
+}
+
+.admin-badge {
+    padding: 3px 6px;
+    border-radius: 5px;
+    background: #fef3c7;
+    color: #b45309;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.member-remove-button {
+    border: 0;
+    background: transparent;
+    color: #dc2626;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.member-remove-button:hover {
+    text-decoration: underline;
+}
+
+.member-management-form {
+    margin-top: 14px;
 }
 
 .crop-card {

@@ -13,6 +13,9 @@ let currentUserId = "";
 let selectedUserId = "";
 
 let selectedUsername = "";
+let selectedGroupId = "";
+let groups = [];
+let pendingReply = null;
 
 let users = [];
 
@@ -343,9 +346,16 @@ document.addEventListener("click", event => {
     }
 });
 
+document.getElementById("create-group-button").addEventListener("click", createGroup);
+document.getElementById("mute-group-button").addEventListener("click", toggleGroupMute);
+document.getElementById("manage-group-button").addEventListener("click", manageGroup);
+document.getElementById("group-members-modal").addEventListener("click", event => {
+    if (event.target.id === "group-members-modal") closeGroupMembers();
+});
+
 document.getElementById("attachment-button").addEventListener("click", () => {
-    if (!selectedUserId) {
-        showToast("Select a user before attaching a file", "error");
+    if (!selectedUserId && !selectedGroupId) {
+        showToast("Select a chat or group before attaching a file", "error");
         return;
     }
     document.getElementById("attachment-input").click();
@@ -821,6 +831,8 @@ function connectSocket() {
                 "Socket connected"
             );
 
+            loadGroups();
+
         }
     );
 
@@ -1126,6 +1138,26 @@ function connectSocket() {
 
         }
     );
+
+    socket.on("group message", data => {
+        if (data.groupId === selectedGroupId) addMessage(data);
+        if (currentProfile.notifications !== false && data.sender !== currentUserId && data.groupId !== selectedGroupId) {
+            showToast(`New message in ${groups.find(group => group._id === data.groupId)?.name || "group"}`);
+        }
+        loadGroups();
+    });
+
+    socket.on("group updated", () => loadGroups());
+
+    socket.on("message reaction", data => {
+        const element = document.querySelector(`[data-message-id="${data.messageId}"]`);
+        if (element) renderReactions(element, data.reactions || []);
+    });
+
+    socket.on("message pinned", data => {
+        const element = document.querySelector(`[data-message-id="${data.messageId}"]`);
+        if (element) element.classList.toggle("pinned-message", data.pinned);
+    });
 
     socket.on(
         "account deleted",
@@ -1572,6 +1604,7 @@ async function openChat(
     user
 ) {
 
+    selectedGroupId = "";
     selectedUserId =
         user.id;
 
@@ -1604,6 +1637,9 @@ async function openChat(
 
 
     updateSelectedUserStatus();
+
+    document.getElementById("mute-group-button").style.display = "none";
+    document.getElementById("manage-group-button").style.display = "none";
 
 
     /*
@@ -1844,7 +1880,7 @@ function addMessage(data) {
     usernameDiv.textContent =
         isMyMessage
             ? "You"
-            : selectedUsername;
+            : (data.senderName || selectedUsername);
 
 
     /*
@@ -1958,6 +1994,13 @@ function addMessage(data) {
         div.appendChild(createAttachmentElement(data.attachment));
     }
 
+    if (data.replyTo) {
+        const reply = document.createElement("div");
+        reply.className = "message-reply";
+        reply.textContent = `↪ ${data.replyTo.senderName}: ${data.replyTo.message || "Attachment"}`;
+        div.appendChild(reply);
+    }
+
     div.appendChild(
         textDiv
     );
@@ -1992,12 +2035,180 @@ function addMessage(data) {
         deleteButton.onclick = () => deleteMessage(messageId);
 
         actions.appendChild(deleteButton);
+
+        if (data.groupId) {
+            const replyButton = document.createElement("button");
+            replyButton.type = "button";
+            replyButton.className = "message-action";
+            replyButton.textContent = "Reply";
+            replyButton.onclick = () => {
+                pendingReply = { messageId, senderName: data.senderName || selectedUsername, message: data.message };
+                showToast("Replying to this message");
+                input.focus();
+            };
+            actions.appendChild(replyButton);
+
+            const reactionButton = document.createElement("button");
+            reactionButton.type = "button";
+            reactionButton.className = "message-action";
+            reactionButton.textContent = "👍";
+            reactionButton.onclick = () => socket?.emit("message reaction", { messageId, emoji: "👍" });
+            actions.appendChild(reactionButton);
+
+            const group = groups.find(item => item._id === data.groupId);
+            if (group?.isAdmin) {
+                const pinButton = document.createElement("button");
+                pinButton.type = "button";
+                pinButton.className = "message-action";
+                pinButton.textContent = data.pinned ? "Unpin" : "Pin";
+                pinButton.onclick = () => socket?.emit("pin message", { messageId, pinned: !data.pinned });
+                actions.appendChild(pinButton);
+            }
+        }
+
         div.appendChild(actions);
     }
+
+    if (data.reactions?.length) renderReactions(div, data.reactions);
+    if (data.pinned) div.classList.add("pinned-message");
 
 
     scrollToBottom();
 
+}
+
+function renderReactions(element, reactions) {
+    let bar = element.querySelector(".reaction-bar");
+    if (!bar) {
+        bar = document.createElement("div");
+        bar.className = "reaction-bar";
+        element.appendChild(bar);
+    }
+    bar.textContent = [...new Set(reactions.map(reaction => reaction.emoji))].join(" ");
+}
+
+async function loadGroups() {
+    const response = await profileRequest("/api/groups");
+    if (!response.ok) return;
+    groups = await response.json();
+    renderGroups();
+    if (socket) socket.emit("join groups", groups.map(group => group._id));
+}
+
+function renderGroups() {
+    const list = document.getElementById("group-list");
+    list.innerHTML = "";
+    groups.forEach(group => {
+        const item = document.createElement("div");
+        item.className = `user-item group-item${group._id === selectedGroupId ? " active" : ""}`;
+        item.innerHTML = `<div class="user-avatar group-avatar">${escapeHtml(group.name.charAt(0).toUpperCase())}</div><div class="user-info"><div class="user-name">${escapeHtml(group.name)}</div><div class="last-message">${group.members.length} members${group.muted ? " · muted" : ""}</div></div>`;
+        item.addEventListener("click", () => openGroup(group));
+        list.appendChild(item);
+    });
+}
+
+async function createGroup() {
+    const name = await showActionModal({ title: "Create group", message: "Choose a name for your new group.", inputValue: "", confirmLabel: "Create" });
+    if (!name || !name.trim()) return;
+    const response = await profileRequest("/api/groups", { method: "POST", body: JSON.stringify({ name: name.trim() }) });
+    const data = await response.json();
+    if (!response.ok) return showToast(data.message || "Unable to create group", "error");
+    showToast("Group created", "success");
+    loadGroups();
+}
+
+async function openGroup(group) {
+    selectedGroupId = group._id;
+    selectedUserId = "";
+    selectedUsername = group.name;
+    if (socket) socket.emit("join groups", [group._id]);
+    document.getElementById("chat-username").textContent = group.name;
+    document.getElementById("chat-status").textContent = `${group.members.length} members`;
+    document.getElementById("chat-avatar").textContent = group.name.charAt(0).toUpperCase();
+    document.getElementById("chat-avatar").style.backgroundImage = "";
+    document.getElementById("chat-avatar").classList.remove("has-image");
+    document.getElementById("mute-group-button").style.display = "inline-block";
+    document.getElementById("mute-group-button").textContent = group.muted ? "Unmute" : "Mute";
+    document.getElementById("manage-group-button").style.display = "inline-block";
+    input.disabled = false;
+    input.placeholder = `Message ${group.name}...`;
+    document.getElementById("send-button").disabled = false;
+    messages.innerHTML = "";
+    const response = await profileRequest(`/api/groups/${group._id}/messages`);
+    if (response.ok) (await response.json()).forEach(message => addMessage({ ...message, groupId: group._id, senderName: group.members.find(member => member._id === message.sender)?.username }));
+    renderGroups();
+}
+
+async function manageGroup() {
+    const group = groups.find(item => item._id === selectedGroupId);
+    if (!group) return;
+
+    document.getElementById("members-title").textContent = `${group.name} members`;
+    document.getElementById("members-subtitle").textContent = `${group.members.length} members`;
+    document.getElementById("member-management-form").style.display = group.isAdmin ? "block" : "none";
+    renderGroupMembers(group);
+
+    const modal = document.getElementById("group-members-modal");
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+}
+
+function renderGroupMembers(group) {
+    const list = document.getElementById("group-members-list");
+    list.innerHTML = "";
+    group.members.forEach(member => {
+        const row = document.createElement("div");
+        row.className = "group-member-row";
+        const isAdmin = group.admins.some(admin => String(admin) === String(member._id));
+        row.innerHTML = `<span class="member-avatar">${escapeHtml((member.displayName || member.username).charAt(0).toUpperCase())}</span><span class="member-name">${escapeHtml(member.displayName || member.username)}</span>${isAdmin ? '<span class="admin-badge">Admin</span>' : ''}`;
+        if (group.isAdmin && String(member._id) !== String(group.owner)) {
+            const adminButton = document.createElement("button");
+            adminButton.className = "member-remove-button";
+            adminButton.textContent = isAdmin ? "Remove admin" : "Make admin";
+            adminButton.onclick = () => updateGroupMember(member._id, isAdmin ? "demote" : "promote");
+            row.appendChild(adminButton);
+
+            const removeButton = document.createElement("button");
+            removeButton.className = "member-remove-button";
+            removeButton.textContent = "Remove";
+            removeButton.onclick = () => updateGroupMember(member._id, "remove");
+            row.appendChild(removeButton);
+        }
+        list.appendChild(row);
+    });
+}
+
+function closeGroupMembers() {
+    const modal = document.getElementById("group-members-modal");
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+async function updateGroupMemberFromInput(action) {
+    const username = document.getElementById("member-username-input").value.trim();
+    const member = users.find(user => user.username.toLowerCase() === username.toLowerCase());
+    if (!member) return showToast("User not found", "error");
+    await updateGroupMember(member.id, action);
+    document.getElementById("member-username-input").value = "";
+}
+
+async function updateGroupMember(userId, action) {
+    const response = await profileRequest(`/api/groups/${selectedGroupId}/members`, { method: "PATCH", body: JSON.stringify({ userId, action }) });
+    const data = await response.json();
+    if (!response.ok) return showToast(data.message || "Unable to update members", "error");
+    showToast(`Member ${action === "add" ? "added" : action === "promote" ? "promoted to admin" : action === "demote" ? "removed as admin" : "removed"}`, "success");
+    groups = await (await profileRequest("/api/groups")).json();
+    const group = groups.find(item => item._id === selectedGroupId);
+    if (group) renderGroupMembers(group);
+    renderGroups();
+}
+
+async function toggleGroupMute() {
+    const group = groups.find(item => item._id === selectedGroupId);
+    if (!group) return;
+    const muted = !group.muted;
+    const response = await profileRequest(`/api/groups/${selectedGroupId}/mute`, { method: "PATCH", body: JSON.stringify({ muted }) });
+    if (response.ok) { group.muted = muted; document.getElementById("mute-group-button").textContent = muted ? "Unmute" : "Mute"; showToast(muted ? "Group muted" : "Group unmuted", "success"); renderGroups(); }
 }
 
 function createAttachmentElement(attachment) {
@@ -2140,7 +2351,7 @@ async function sendMessage() {
 
     if (
         (!text && !pendingAttachment) ||
-        !selectedUserId ||
+        (!selectedUserId && !selectedGroupId) ||
         !socket
     ) {
 
@@ -2159,6 +2370,19 @@ async function sendMessage() {
             showToast(error.message, "error");
             return;
         }
+    }
+
+    if (selectedGroupId) {
+        socket.emit("group message", {
+            groupId: selectedGroupId,
+            message: text,
+            attachment,
+            replyTo: pendingReply
+        });
+        pendingReply = null;
+        input.value = "";
+        clearAttachment();
+        return;
     }
 
     socket.emit(
