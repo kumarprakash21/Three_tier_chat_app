@@ -16,6 +16,18 @@ The application includes authentication, persistent private messages, online pre
 - Logout functionality with a custom in-app button.
 - Startup loading state prevents the register screen from flashing during refresh.
 
+### V2.2 Profile and account settings
+
+- Profile panel with display name and personal bio.
+- Profile picture upload supporting JPG, PNG, and WebP images up to 1 MB.
+- Profile picture preview before saving.
+- Change password flow requiring the current password.
+- New passwords must contain at least 6 characters.
+- Online/offline presence and last-seen information in the profile panel.
+- Notification preference for incoming messages.
+- New-message in-app notifications when the conversation is not currently open.
+- Profile details and preferences persist in MongoDB.
+
 ### Private real-time chat
 
 - One-to-one private conversations between registered users.
@@ -108,6 +120,9 @@ The hidden chat relationships are stored in the user's `hiddenChats` array.
 | `POST` | `/api/login` | No | Authenticate a user and return a JWT |
 | `GET` | `/api/users` | Yes | Get available users and conversation summaries |
 | `GET` | `/api/messages/:userId` | Yes | Load a private conversation and mark incoming messages as read |
+| `GET` | `/api/profile` | Yes | Get the authenticated user's profile and preferences |
+| `PATCH` | `/api/profile` | Yes | Update display name, bio, profile picture, and notifications |
+| `PATCH` | `/api/password` | Yes | Change the authenticated user's password |
 | `DELETE` | `/api/account` | Yes | Permanently delete the current account and its messages |
 | `DELETE` | `/api/chats/:userId` | Yes | Hide a user from the current user's chat list |
 
@@ -134,6 +149,7 @@ The hidden chat relationships are stored in the user's `hiddenChats` array.
 - `message edited` - Update an edited message in real time.
 - `message deleted` - Remove a deleted message in real time.
 - `conversation updated` - Refresh conversation previews and unread counts.
+- Profile settings are loaded and saved over the authenticated profile endpoints.
 - `user deleted` - Remove a deleted account from user lists.
 - `account deleted` - Close the deleted user's active session.
 
@@ -222,7 +238,6 @@ Planned improvements include:
 
 - Group conversations.
 - File and image sharing.
-- User profile pictures.
 - Message reactions.
 - Push notifications.
 - Advanced message search.

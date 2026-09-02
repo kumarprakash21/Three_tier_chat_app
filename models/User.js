@@ -16,6 +16,30 @@ const userSchema = new mongoose.Schema(
             required: true
         },
 
+        displayName: {
+            type: String,
+            trim: true,
+            maxlength: 50,
+            default: ""
+        },
+
+        bio: {
+            type: String,
+            trim: true,
+            maxlength: 160,
+            default: ""
+        },
+
+        profilePicture: {
+            type: String,
+            default: ""
+        },
+
+        notifications: {
+            type: Boolean,
+            default: true
+        },
+
         lastSeen: {
             type: Date,
             default: Date.now

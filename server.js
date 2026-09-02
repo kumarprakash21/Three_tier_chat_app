@@ -187,7 +187,19 @@ app.post(
                         user._id,
 
                     username:
-                        user.username
+                        user.username,
+
+                    displayName:
+                        user.displayName || "",
+
+                    bio:
+                        user.bio || "",
+
+                    profilePicture:
+                        user.profilePicture || "",
+
+                    notifications:
+                        user.notifications !== false
 
                 }
 
@@ -397,6 +409,112 @@ app.delete(
 
 /*
 ==================================================
+PROFILE
+==================================================
+*/
+
+app.get(
+    "/api/profile",
+    authenticateToken,
+    async (req, res) => {
+
+        try {
+
+            const user = await User.findById(
+                req.user.id,
+                "username displayName bio profilePicture notifications lastSeen"
+            );
+
+            if (!user) {
+                return res.status(404).json({ message: "Profile not found" });
+            }
+
+            return res.json(user);
+
+        } catch (error) {
+            console.error("Get profile error:", error);
+            return res.status(500).json({ message: "Unable to load profile" });
+        }
+    }
+);
+
+app.patch(
+    "/api/profile",
+    authenticateToken,
+    async (req, res) => {
+
+        try {
+
+            const { displayName, bio, profilePicture, notifications } = req.body;
+
+            if (displayName !== undefined && String(displayName).trim().length > 50) {
+                return res.status(400).json({ message: "Display name must be 50 characters or fewer" });
+            }
+
+            if (bio !== undefined && String(bio).trim().length > 160) {
+                return res.status(400).json({ message: "Bio must be 160 characters or fewer" });
+            }
+
+            if (profilePicture && (!String(profilePicture).startsWith("data:image/") || String(profilePicture).length > 1500000)) {
+                return res.status(400).json({ message: "Profile picture must be a valid image under 1 MB" });
+            }
+
+            const update = {};
+
+            if (displayName !== undefined) update.displayName = String(displayName).trim();
+            if (bio !== undefined) update.bio = String(bio).trim();
+            if (profilePicture !== undefined) update.profilePicture = profilePicture;
+            if (notifications !== undefined) update.notifications = Boolean(notifications);
+
+            const user = await User.findByIdAndUpdate(
+                req.user.id,
+                { $set: update },
+                { new: true, runValidators: true }
+            ).select("username displayName bio profilePicture notifications lastSeen");
+
+            return res.json(user);
+
+        } catch (error) {
+            console.error("Update profile error:", error);
+            return res.status(500).json({ message: "Unable to update profile" });
+        }
+    }
+);
+
+app.patch(
+    "/api/password",
+    authenticateToken,
+    async (req, res) => {
+
+        try {
+
+            const { currentPassword, newPassword } = req.body;
+
+            if (!currentPassword || !newPassword || newPassword.length < 6) {
+                return res.status(400).json({ message: "New password must be at least 6 characters" });
+            }
+
+            const user = await User.findById(req.user.id);
+
+            if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+                return res.status(401).json({ message: "Current password is incorrect" });
+            }
+
+            user.password = await bcrypt.hash(newPassword, 12);
+            await user.save();
+
+            return res.json({ message: "Password changed successfully" });
+
+        } catch (error) {
+            console.error("Change password error:", error);
+            return res.status(500).json({ message: "Unable to change password" });
+        }
+    }
+);
+
+
+/*
+==================================================
 REMOVE CHAT
 ==================================================
 */
@@ -487,7 +605,7 @@ app.get(
                             $nin: hiddenChats
                         }
                     },
-                    "username lastSeen"
+                    "username displayName bio profilePicture lastSeen"
                 )
                 .sort({
                     username: 1
@@ -574,6 +692,12 @@ app.get(
 
                     username:
                         user.username,
+
+                    displayName:
+                        user.displayName,
+
+                    profilePicture:
+                        user.profilePicture,
 
                     online:
                         onlineUsers.has(

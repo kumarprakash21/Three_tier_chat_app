@@ -148,6 +148,14 @@
 
                 <div class="header-actions">
                 <button
+                    class="profile-button"
+                    onclick="openProfile()"
+                    title="Open profile"
+                    aria-label="Open profile"
+                >
+                    <span id="profile-avatar">?</span>
+                </button>
+                <button
                     class="logout-button"
                     onclick="logout()"
                     title="Logout"
@@ -360,6 +368,68 @@
             <div class="modal-actions">
                 <button id="modal-cancel" class="modal-button modal-cancel" type="button">Cancel</button>
                 <button id="modal-confirm" class="modal-button modal-confirm" type="button">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="profile-modal" class="app-modal" aria-hidden="true">
+        <div class="profile-card" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+            <div class="profile-card-header">
+                <div>
+                    <h3 id="profile-title">Your profile</h3>
+                    <p>Manage your profile and account settings.</p>
+                </div>
+                <button class="profile-close" type="button" onclick="closeProfile()" aria-label="Close profile">&times;</button>
+            </div>
+
+            <div class="profile-picture-editor">
+                <div id="profile-preview" class="profile-preview">?</div>
+                <label class="upload-button" for="profile-picture-input">Change photo</label>
+                <input id="profile-picture-input" type="file" accept="image/png,image/jpeg,image/webp">
+                <small>JPG, PNG or WebP up to 1 MB</small>
+            </div>
+
+            <label class="profile-label" for="display-name-input">Display name</label>
+            <input id="display-name-input" class="profile-input" type="text" maxlength="50" placeholder="Your name">
+
+            <label class="profile-label" for="bio-input">Bio</label>
+            <textarea id="bio-input" class="profile-input profile-textarea" maxlength="160" placeholder="Tell people a little about yourself"></textarea>
+
+            <div class="profile-presence">
+                <span class="presence-dot"></span>
+                <span id="profile-presence-text">Checking presence...</span>
+            </div>
+
+            <label class="notification-toggle">
+                <input id="notifications-input" type="checkbox">
+                <span>Notify me about new messages</span>
+            </label>
+
+            <div class="profile-card-actions">
+                <button class="modal-button modal-cancel" type="button" onclick="openPasswordForm()">Change password</button>
+                <button class="modal-button modal-confirm" type="button" onclick="saveProfile()">Save profile</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="password-modal" class="app-modal" aria-hidden="true">
+        <div class="profile-card" role="dialog" aria-modal="true" aria-labelledby="password-title">
+            <div class="profile-card-header">
+                <div>
+                    <h3 id="password-title">Change password</h3>
+                    <p>Use a strong password with at least 6 characters.</p>
+                </div>
+                <button class="profile-close" type="button" onclick="closePasswordForm()" aria-label="Close password form">&times;</button>
+            </div>
+            <label class="profile-label" for="current-password-input">Current password</label>
+            <input id="current-password-input" class="profile-input" type="password" autocomplete="current-password">
+            <label class="profile-label" for="new-password-input">New password</label>
+            <input id="new-password-input" class="profile-input" type="password" autocomplete="new-password">
+            <label class="profile-label" for="confirm-password-input">Confirm new password</label>
+            <input id="confirm-password-input" class="profile-input" type="password" autocomplete="new-password">
+            <div class="profile-card-actions">
+                <button class="modal-button modal-cancel" type="button" onclick="closePasswordForm()">Cancel</button>
+                <button class="modal-button modal-confirm" type="button" onclick="changePassword()">Update password</button>
             </div>
         </div>
     </div>

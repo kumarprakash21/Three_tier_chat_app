@@ -18,6 +18,11 @@ let users = [];
 
 let typingTimeout = null;
 
+let currentProfile = {
+    notifications: true,
+    profilePicture: ""
+};
+
 
 /*
 ==================================================
@@ -103,6 +108,197 @@ function showActionModal({ title, message, inputValue = null, confirmLabel = "Co
             confirmButton.focus();
         }
     });
+}
+
+function applyProfile(profile) {
+
+    currentProfile = { ...currentProfile, ...profile };
+
+    const displayName =
+        currentProfile.displayName || currentProfile.username || username;
+
+    document.getElementById("logged-user").textContent = displayName;
+
+    const avatar = document.getElementById("profile-avatar");
+    avatar.textContent = displayName.charAt(0).toUpperCase();
+    avatar.style.backgroundImage = currentProfile.profilePicture
+        ? `url("${currentProfile.profilePicture}")`
+        : "";
+    avatar.classList.toggle("has-image", Boolean(currentProfile.profilePicture));
+}
+
+function profileRequest(url, options = {}) {
+    const token = localStorage.getItem("token");
+
+    return fetch(url, {
+        ...options,
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            ...(options.headers || {})
+        }
+    });
+}
+
+async function openProfile() {
+
+    try {
+        const response = await profileRequest("/api/profile");
+        const profile = await response.json();
+
+        if (!response.ok) {
+            showToast(profile.message || "Unable to load profile", "error");
+            return;
+        }
+
+        applyProfile(profile);
+        document.getElementById("display-name-input").value = profile.displayName || "";
+        document.getElementById("bio-input").value = profile.bio || "";
+        document.getElementById("notifications-input").checked = profile.notifications !== false;
+
+        const preview = document.getElementById("profile-preview");
+        preview.textContent = (profile.displayName || profile.username || username).charAt(0).toUpperCase();
+        preview.style.backgroundImage = profile.profilePicture ? `url("${profile.profilePicture}")` : "";
+        preview.classList.toggle("has-image", Boolean(profile.profilePicture));
+
+        document.getElementById("profile-presence-text").textContent = socket?.connected
+            ? "Online now"
+            : `Offline • last seen ${formatLastSeen(profile.lastSeen)}`;
+
+        document.getElementById("profile-modal").classList.add("open");
+        document.getElementById("profile-modal").setAttribute("aria-hidden", "false");
+
+    } catch (error) {
+        console.error("Load profile error:", error);
+        showToast("Unable to connect to server", "error");
+    }
+}
+
+function closeProfile() {
+    const modal = document.getElementById("profile-modal");
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+document.getElementById("profile-modal").addEventListener("click", event => {
+    if (event.target.id === "profile-modal") closeProfile();
+});
+
+function openPasswordForm() {
+    closeProfile();
+    document.getElementById("password-modal").classList.add("open");
+    document.getElementById("password-modal").setAttribute("aria-hidden", "false");
+    document.getElementById("current-password-input").focus();
+}
+
+function closePasswordForm() {
+    const modal = document.getElementById("password-modal");
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+document.getElementById("password-modal").addEventListener("click", event => {
+    if (event.target.id === "password-modal") closePasswordForm();
+});
+
+document.getElementById("profile-picture-input").addEventListener("change", event => {
+    const file = event.target.files[0];
+
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        const preview = document.getElementById("profile-preview");
+        preview.style.backgroundImage = `url("${reader.result}")`;
+        preview.classList.add("has-image");
+    };
+    reader.readAsDataURL(file);
+});
+
+async function saveProfile() {
+
+    const file = document.getElementById("profile-picture-input").files[0];
+    let profilePicture = currentProfile.profilePicture || "";
+
+    if (file) {
+        if (file.size > 1000000) {
+            showToast("Profile picture must be under 1 MB", "error");
+            return;
+        }
+
+        profilePicture = await new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    try {
+        const response = await profileRequest("/api/profile", {
+            method: "PATCH",
+            body: JSON.stringify({
+                displayName: document.getElementById("display-name-input").value,
+                bio: document.getElementById("bio-input").value,
+                profilePicture,
+                notifications: document.getElementById("notifications-input").checked
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            showToast(data.message || "Unable to update profile", "error");
+            return;
+        }
+
+        currentProfile = { ...currentProfile, ...data };
+        localStorage.setItem("user", JSON.stringify({
+            ...JSON.parse(localStorage.getItem("user") || "{}"),
+            ...data
+        }));
+        applyProfile(data);
+        closeProfile();
+        showToast("Profile updated successfully", "success");
+
+    } catch (error) {
+        console.error("Update profile error:", error);
+        showToast("Unable to connect to server", "error");
+    }
+}
+
+async function changePassword() {
+
+    const currentPassword = document.getElementById("current-password-input").value;
+    const newPassword = document.getElementById("new-password-input").value;
+    const confirmation = document.getElementById("confirm-password-input").value;
+
+    if (newPassword !== confirmation) {
+        showToast("New passwords do not match", "error");
+        return;
+    }
+
+    try {
+        const response = await profileRequest("/api/password", {
+            method: "PATCH",
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            showToast(data.message || "Unable to change password", "error");
+            return;
+        }
+
+        document.getElementById("current-password-input").value = "";
+        document.getElementById("new-password-input").value = "";
+        document.getElementById("confirm-password-input").value = "";
+        closePasswordForm();
+        showToast("Password changed successfully", "success");
+
+    } catch (error) {
+        console.error("Change password error:", error);
+        showToast("Unable to connect to server", "error");
+    }
 }
 
 document.getElementById("app-modal").addEventListener("click", event => {
@@ -360,6 +556,8 @@ async function login() {
 currentUserId =
     data.user.id;
 
+applyProfile(data.user);
+
 
 /*
 Show logged-in username
@@ -519,6 +717,15 @@ function connectSocket() {
 
             loadUsers();
 
+            if (
+                data.sender !== currentUserId &&
+                data.sender !== selectedUserId &&
+                currentProfile.notifications !== false
+            ) {
+                const sender = users.find(user => user.id === data.sender);
+                showToast(`New message from ${sender?.displayName || sender?.username || "a contact"}`);
+            }
+
         }
     );
 
@@ -649,7 +856,21 @@ function connectSocket() {
 
     socket.on(
         "messages read",
-        () => {
+        (data) => {
+
+            if (
+                data?.userId === selectedUserId
+            ) {
+
+                document
+                    .querySelectorAll(".message.sent .message-status")
+                    .forEach(status => {
+                        status.classList.remove("sent");
+                        status.classList.add("read");
+                        status.textContent = "✓✓";
+                    });
+
+            }
 
             loadUsers();
 
@@ -884,9 +1105,14 @@ function renderUsers(
 
 
             avatar.textContent =
-                user.username
+                (user.displayName || user.username)
                     .charAt(0)
                     .toUpperCase();
+
+            if (user.profilePicture) {
+                avatar.style.backgroundImage = `url("${user.profilePicture}")`;
+                avatar.classList.add("has-image");
+            }
 
 
             /*
@@ -943,7 +1169,7 @@ function renderUsers(
                 "user-name";
 
             name.textContent =
-                user.username;
+                user.displayName || user.username;
 
 
             /*
@@ -2151,8 +2377,10 @@ window.addEventListener(
                 username =
     user.username;
 
-currentUserId =
+                currentUserId =
     user.id;
+
+                applyProfile(user);
 
 
 /*
