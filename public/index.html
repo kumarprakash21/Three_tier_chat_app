@@ -10,6 +10,10 @@
         content="width=device-width, initial-scale=1.0"
     >
 
+    <script>
+        document.documentElement.classList.add("app-loading");
+    </script>
+
     <title>ChatApp V2.1</title>
 
     <link
@@ -196,6 +200,15 @@
 
                 <!-- LOGOUT -->
 
+                <div class="header-actions">
+                <button
+                    class="profile-button"
+                    onclick="openProfile()"
+                    title="Open profile"
+                    aria-label="Open profile"
+                >
+                    <span id="profile-avatar">?</span>
+                </button>
                 <button
                     class="logout-button"
                     onclick="logout()"
@@ -204,17 +217,16 @@
                     🚪
                 </button>
 
-
-                <!-- DELETE ACCOUNT -->
-
                 <button
-                    type="button"
+                    class="delete-account-icon"
                     onclick="deleteAccount()"
-                    class="delete-account-button"
-                    title="Delete Account"
+                    title="Delete account"
+                    aria-label="Delete account"
                 >
-                    🗑️
+                    ×
                 </button>
+
+                </div>
 
             </div>
 
@@ -247,11 +259,8 @@
             =================================================== -->
 
             <div class="chat-list-header">
-
-                <span>
-                    CHATS
-                </span>
-
+                <span>CHATS</span>
+                <button id="create-group-button" class="list-action" type="button">+ Group</button>
             </div>
 
 
@@ -267,10 +276,11 @@
             </div>
 
 
+            <div class="chat-list-header group-heading"><span>GROUPS</span></div>
+            <div id="group-list" class="user-list group-list"></div>
 
-            <!-- ==================================================
-                 SIDEBAR FOOTER
-            =================================================== -->
+
+            <!-- SIDEBAR FOOTER -->
 
             <div class="sidebar-footer">
 
@@ -303,6 +313,14 @@
                 class="chat-header"
             >
 
+                <button
+                    id="mobile-back-button"
+                    class="mobile-back-button"
+                    type="button"
+                    onclick="closeMobileChat()"
+                    aria-label="Back to chats"
+                >&#8592;</button>
+
                 <div class="chat-user-info">
 
 
@@ -330,6 +348,12 @@
 
                     </div>
 
+                </div>
+
+                <div class="group-actions">
+                    <button id="mute-group-button" class="chat-header-action" type="button" style="display:none">Mute</button>
+                    <button id="manage-group-button" class="chat-header-action" type="button" style="display:none">Members</button>
+                    <button id="delete-group-button" class="chat-header-action group-delete-action" type="button" style="display:none">Delete</button>
                 </div>
 
             </div>
@@ -397,6 +421,9 @@
 
             <div class="message-footer">
 
+                <button id="emoji-button" class="composer-tool" type="button" title="Add emoji" aria-label="Add emoji">☺</button>
+                <button id="attachment-button" class="composer-tool" type="button" title="Attach file" aria-label="Attach file">+</button>
+                <input id="attachment-input" type="file" hidden accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
 
                 <input
                     type="text"
@@ -416,6 +443,9 @@
                 </button>
 
             </div>
+
+            <div id="emoji-picker" class="emoji-picker" aria-label="Emoji picker"></div>
+            <div id="attachment-preview" class="attachment-preview" style="display:none;"></div>
 
 
 
@@ -441,125 +471,125 @@
     </div>
 
 
+    <div id="toast-container" class="toast-container"></div>
 
-    <!-- ==================================================
-         CUSTOM NOTIFICATION MODAL
-    =================================================== -->
-
-    <div
-        id="notification-modal"
-        class="modal-overlay"
-        style="display:none;"
-    >
-
-        <div class="modal-box notification-box">
-
-
-            <div
-                id="notification-icon"
-                class="modal-icon"
-            >
-                ✓
-            </div>
-
-
-            <h2 id="notification-title">
-                Success
-            </h2>
-
-
-            <p id="notification-message">
-                Operation completed successfully.
-            </p>
-
-
-            <button
-                id="notification-button"
-                class="modal-primary-button"
-                onclick="closeNotification()"
-            >
-                Continue
-            </button>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- ==================================================
-         DELETE ACCOUNT MODAL
-    =================================================== -->
-
-    <div
-        id="delete-modal"
-        class="modal-overlay"
-        style="display:none;"
-    >
-
-        <div class="modal-box delete-modal-box">
-
-
-            <div class="modal-icon delete-icon">
-                ⚠️
-            </div>
-
-
-            <h2>
-                Delete Account?
-            </h2>
-
-
-            <p>
-                This action cannot be undone.
-            </p>
-
-
-            <div class="delete-warning">
-
-                <div>
-                    🗑️ Your account will be deleted
-                </div>
-
-                <div>
-                    💬 Your messages will be deleted
-                </div>
-
-                <div>
-                    🔐 Your login access will be removed
-                </div>
-
-            </div>
-
-
+    <div id="app-modal" class="app-modal" aria-hidden="true">
+        <div class="modal-card" role="dialog" aria-modal="true">
+            <h3 id="modal-title">Confirm action</h3>
+            <p id="modal-message"></p>
+            <input id="modal-input" class="modal-input" type="text" autocomplete="off">
             <div class="modal-actions">
+                <button id="modal-cancel" class="modal-button modal-cancel" type="button">Cancel</button>
+                <button id="modal-confirm" class="modal-button modal-confirm" type="button">Confirm</button>
+            </div>
+        </div>
+    </div>
 
-                <button
-                    class="modal-cancel-button"
-                    onclick="closeDeleteModal()"
-                >
-                    Cancel
-                </button>
-
-
-                <button
-                    class="modal-delete-button"
-                    onclick="confirmDeleteAccount()"
-                >
-                    Delete Account
-                </button>
-
+    <div id="profile-modal" class="app-modal" aria-hidden="true">
+        <div class="profile-card" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+            <div class="profile-card-header">
+                <div>
+                    <h3 id="profile-title">Your profile</h3>
+                    <p>Manage your profile and account settings.</p>
+                </div>
+                <button class="profile-close" type="button" onclick="closeProfile()" aria-label="Close profile">&times;</button>
             </div>
 
-        </div>
+            <div class="profile-picture-editor">
+                <div id="profile-preview" class="profile-preview">?</div>
+                <label class="upload-button" for="profile-picture-input">Change photo</label>
+                <input id="profile-picture-input" type="file" accept="image/png,image/jpeg,image/webp">
+                <small>Select a photo, then crop it before saving</small>
+            </div>
 
+            <label class="profile-label" for="display-name-input">Display name</label>
+            <input id="display-name-input" class="profile-input" type="text" maxlength="50" placeholder="Your name">
+
+            <label class="profile-label" for="bio-input">Bio</label>
+            <textarea id="bio-input" class="profile-input profile-textarea" maxlength="160" placeholder="Tell people a little about yourself"></textarea>
+
+            <div class="profile-presence">
+                <span class="presence-dot"></span>
+                <span id="profile-presence-text">Checking presence...</span>
+            </div>
+
+            <label class="notification-toggle">
+                <input id="notifications-input" type="checkbox">
+                <span>Notify me about new messages</span>
+            </label>
+
+            <div class="profile-card-actions">
+                <button class="modal-button modal-cancel" type="button" onclick="openPasswordForm()">Change password</button>
+                <button class="modal-button modal-confirm" type="button" onclick="saveProfile()">Save profile</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="password-modal" class="app-modal" aria-hidden="true">
+        <div class="profile-card" role="dialog" aria-modal="true" aria-labelledby="password-title">
+            <div class="profile-card-header">
+                <div>
+                    <h3 id="password-title">Change password</h3>
+                    <p>Use a strong password with at least 6 characters.</p>
+                </div>
+                <button class="profile-close" type="button" onclick="closePasswordForm()" aria-label="Close password form">&times;</button>
+            </div>
+            <label class="profile-label" for="current-password-input">Current password</label>
+            <input id="current-password-input" class="profile-input" type="password" autocomplete="current-password">
+            <label class="profile-label" for="new-password-input">New password</label>
+            <input id="new-password-input" class="profile-input" type="password" autocomplete="new-password">
+            <label class="profile-label" for="confirm-password-input">Confirm new password</label>
+            <input id="confirm-password-input" class="profile-input" type="password" autocomplete="new-password">
+            <div class="profile-card-actions">
+                <button class="modal-button modal-cancel" type="button" onclick="closePasswordForm()">Cancel</button>
+                <button class="modal-button modal-confirm" type="button" onclick="changePassword()">Update password</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="crop-modal" class="app-modal" aria-hidden="true">
+        <div class="crop-card" role="dialog" aria-modal="true" aria-labelledby="crop-title">
+            <div class="profile-card-header">
+                <div>
+                    <h3 id="crop-title">Crop your photo</h3>
+                    <p>Drag the image to position it and adjust the zoom.</p>
+                </div>
+                <button class="profile-close" type="button" onclick="closeCropper()" aria-label="Close crop editor">&times;</button>
+            </div>
+            <canvas id="crop-canvas" width="320" height="320"></canvas>
+            <label class="crop-zoom-label" for="crop-zoom">Zoom</label>
+            <input id="crop-zoom" class="crop-zoom" type="range" min="1" max="3" step="0.01" value="1">
+            <div class="profile-card-actions">
+                <button class="modal-button modal-cancel" type="button" onclick="closeCropper()">Cancel</button>
+                <button class="modal-button modal-confirm" type="button" onclick="applyCrop()">Use this crop</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="group-members-modal" class="app-modal" aria-hidden="true">
+        <div class="profile-card" role="dialog" aria-modal="true" aria-labelledby="members-title">
+            <div class="profile-card-header">
+                <div>
+                    <h3 id="members-title">Group members</h3>
+                    <p id="members-subtitle">Manage this group.</p>
+                </div>
+                <button class="profile-close" type="button" onclick="closeGroupMembers()" aria-label="Close members">&times;</button>
+            </div>
+            <div id="group-members-list" class="group-members-list"></div>
+            <div id="member-management-form" class="member-management-form">
+                <label class="upload-button group-picture-upload" for="group-picture-input">Change group picture</label>
+                <input id="group-picture-input" type="file" accept="image/png,image/jpeg,image/webp">
+                <input id="member-username-input" class="profile-input" type="text" placeholder="Enter username">
+                <div class="profile-card-actions">
+                    <button class="modal-button modal-cancel" type="button" onclick="updateGroupMemberFromInput('remove')">Remove</button>
+                    <button class="modal-button modal-confirm" type="button" onclick="updateGroupMemberFromInput('add')">Add member</button>
+                </div>
+            </div>
+        </div>
     </div>
 
 
-
-    <!-- ==================================================
-         SOCKET.IO
-    =================================================== -->
+    <!-- SOCKET.IO -->
 
     <script src="/socket.io/socket.io.js"></script>
 

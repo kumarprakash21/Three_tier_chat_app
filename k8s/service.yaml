@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatapp
+  labels:
+    app.kubernetes.io/name: chatapp
+spec:
+  selector:
+    app.kubernetes.io/name: chatapp
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      nodePort: 30493
+  type: NodePort
