@@ -1,21 +1,21 @@
-FROM node:20-alpine
+# Install dependencies in a separate stage so npm cache and build leftovers
+# are not included in the final image.
+FROM node:20-alpine AS dependencies
 
 WORKDIR /app
 
-# Install only production dependencies and keep the image small.
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev
 
-COPY server.js ./
-COPY middleware ./middleware
-COPY models ./models
-COPY public ./public
+FROM node:20-alpine AS production
 
-# Uploaded files are runtime data and should be mounted as a volume.
-RUN mkdir -p /app/uploads && chown -R node:node /app
-USER node
+WORKDIR /app
 
-ENV NODE_ENV=production
+COPY --from=dependencies /app/node_modules ./node_modules
+
+# .dockerignore keeps local dependencies, uploads, and secrets out.
+COPY . .
+
 ENV PORT=3000
 
 EXPOSE 3000
