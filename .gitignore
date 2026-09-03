@@ -3,3 +3,4 @@ node_modules/
 *.log
 uploads/
 k8s/secret.yaml
+k8s/mongodb/secret.yaml

@@ -317,6 +317,29 @@ deployment uses one replica because online-user state and uploads are local
 to the application pod. Add Redis Socket.IO scaling and shared object storage
 before increasing the replica count.
 
+### Optional: MongoDB inside Kubernetes
+
+For development or learning, MongoDB manifests are available in
+`k8s/mongodb/`. Copy `k8s/mongodb/secret.example.yaml` to
+`k8s/mongodb/secret.yaml`, set a strong password, and apply them:
+
+```bash
+kubectl apply -f k8s/mongodb/secret.yaml -n chatapp
+kubectl apply -f k8s/mongodb/service.yaml -f k8s/mongodb/statefulset.yaml -n chatapp
+```
+
+Then set the application `MONGODB_URI` in `k8s/secret.yaml` to:
+
+```text
+mongodb://root:PASSWORD@mongodb:27017/chatapp?authSource=admin
+```
+
+The StatefulSet creates its own persistent volume claim from
+`volumeClaimTemplates`; a manual PersistentVolume is normally unnecessary
+when the cluster has a default StorageClass. Use managed MongoDB for
+production unless you also plan backups, monitoring, upgrades, and replica
+set management.
+
 ## Security Notes
 
 - Protected endpoints require a Bearer JWT in the `Authorization` header.
