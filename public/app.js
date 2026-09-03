@@ -164,6 +164,14 @@ function renderChatAvatar(avatar, label, profilePicture = "") {
     avatar.classList.add("has-image");
 }
 
+function openMobileChat() {
+    document.getElementById("chat-container").classList.add("mobile-chat-open");
+}
+
+function closeMobileChat() {
+    document.getElementById("chat-container").classList.remove("mobile-chat-open");
+}
+
 function profileRequest(url, options = {}) {
     const token = localStorage.getItem("token");
 
@@ -1686,6 +1694,7 @@ async function openChat(
     user
 ) {
 
+    openMobileChat();
     selectedGroupId = "";
     selectedUserId =
         user.id;
@@ -2204,6 +2213,7 @@ async function createGroup() {
 }
 
 async function openGroup(group) {
+    openMobileChat();
     selectedGroupId = group._id;
     selectedUserId = "";
     selectedUsername = group.name;
