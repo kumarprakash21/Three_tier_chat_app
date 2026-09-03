@@ -205,6 +205,10 @@ function profileRequest(url, options = {}) {
 async function loadCurrentProfile() {
     try {
         const response = await profileRequest("/api/profile");
+        if (response.status === 401) {
+            logout();
+            return;
+        }
         if (!response.ok) return;
 
         const profile = await response.json();
