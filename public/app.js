@@ -672,9 +672,11 @@ async function register() {
 
     if (!username || !password) {
 
-        alert(
-            "Please fill all fields"
-        );
+        showNotification(
+    "Missing Information",
+    "Please enter username and password.",
+    "error"
+);
 
         return;
     }
@@ -1051,14 +1053,34 @@ function connectSocket() {
     ==============================================
     */
 
-    socket.on(
-        "conversation updated",
-        () => {
+    socket.on("conversation updated", async () => {
 
-            loadUsers();
+    await loadUsers();
+
+    /*
+    Keep currently opened conversation selected
+    */
+
+    if (selectedUserId) {
+
+        const selectedUser =
+            users.find(
+                user =>
+                    String(user.id) ===
+                    String(selectedUserId)
+            );
+
+        if (selectedUser) {
+
+            selectedUser.unreadCount = 0;
 
         }
-    );
+
+    }
+
+    renderUsers(users);
+
+});
 
 
     /*
@@ -1187,10 +1209,33 @@ function connectSocket() {
 
             }
 
-            loadUsers();
+    await loadUsers();
+
+    /*
+    If this conversation is currently open,
+    force unread count to zero.
+    */
+
+    if (selectedUserId) {
+
+        const selectedUser =
+            users.find(
+                user =>
+                    String(user.id) ===
+                    String(selectedUserId)
+            );
+
+        if (selectedUser) {
+
+            selectedUser.unreadCount = 0;
 
         }
-    );
+
+    }
+
+    renderUsers(users);
+
+});
 
 
     /*
@@ -1742,17 +1787,18 @@ async function openChat(
     selectedUserId =
         user.id;
 
-    selectedUsername =
-        user.username;
+async function openChat(user) {
 
+    selectedUserId = user.id;
+    selectedUsername = user.username;
 
     /*
-    Update header
+    ==========================================
+    UPDATE CHAT HEADER
+    ==========================================
     */
 
-    document.getElementById(
-        "chat-username"
-    ).textContent =
+    document.getElementById("chat-username").textContent =
         user.username;
 
 
@@ -1768,40 +1814,59 @@ async function openChat(
 
 
     /*
-    Enable message input
+    ==========================================
+    ENABLE MESSAGE BOX
+    ==========================================
     */
 
-    input.disabled =
-        false;
+    input.disabled = false;
 
     input.placeholder =
         `Message ${user.username}...`;
 
-    document.getElementById(
-        "send-button"
-    ).disabled =
+    document.getElementById("send-button").disabled =
         false;
 
 
     /*
-    Clear previous messages
+    ==========================================
+    IMPORTANT
+    Remove unread count immediately
+    ==========================================
+    */
+
+    const selectedUser =
+        users.find(
+            u => String(u.id) === String(user.id)
+        );
+
+    if (selectedUser) {
+        selectedUser.unreadCount = 0;
+    }
+
+
+    /*
+    Re-render immediately
+    */
+
+    renderUsers(users);
+
+
+    /*
+    ==========================================
+    LOAD CHAT HISTORY
+    ==========================================
     */
 
     messages.innerHTML = "";
 
-
-    /*
-    Load conversation
-    */
-
-    await loadMessages(
-        user.id
-    );
+    await loadMessages(user.id);
 
 
     /*
-    Tell server that messages
-    have been read
+    ==========================================
+    MARK READ THROUGH SOCKET TOO
+    ==========================================
     */
 
     if (socket) {
@@ -1815,14 +1880,19 @@ async function openChat(
 
 
     /*
-    Refresh list.
-
-    This removes the unread badge.
+    Keep selected chat highlighted
     */
 
-    await loadUsers();
-
+    renderUsers(users);
 }
+
+
+    /*
+    ==========================================
+    Tell server messages are read
+    ==========================================
+    */
+
 
 
 /*

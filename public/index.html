@@ -2,8 +2,13 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <script>
         document.documentElement.classList.add("app-loading");
@@ -11,16 +16,24 @@
 
     <title>ChatApp V2.1</title>
 
-    <link rel="stylesheet" href="style.css">
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
 </head>
 
 <body>
 
-    <!-- ==============================
-         REGISTER PAGE
-    =============================== -->
 
-    <div id="register-page" class="auth-page">
+    <!-- ==================================================
+         REGISTER PAGE
+    =================================================== -->
+
+    <div
+        id="register-page"
+        class="auth-page"
+    >
 
         <div class="auth-box">
 
@@ -34,12 +47,14 @@
                 Join ChatApp today
             </p>
 
+
             <input
                 type="text"
                 id="regUsername"
                 placeholder="Username"
                 autocomplete="username"
             >
+
 
             <input
                 type="password"
@@ -48,15 +63,24 @@
                 autocomplete="new-password"
             >
 
-            <button onclick="register()">
+
+            <button
+                onclick="register()"
+            >
                 Register
             </button>
 
+
             <p class="switch-text">
+
                 Already have an account?
-                <span onclick="showLogin()">
+
+                <span
+                    onclick="showLogin()"
+                >
                     Login
                 </span>
+
             </p>
 
         </div>
@@ -64,11 +88,16 @@
     </div>
 
 
-    <!-- ==============================
-         LOGIN PAGE
-    =============================== -->
 
-    <div id="login-page" class="auth-page" style="display:none;">
+    <!-- ==================================================
+         LOGIN PAGE
+    =================================================== -->
+
+    <div
+        id="login-page"
+        class="auth-page"
+        style="display:none;"
+    >
 
         <div class="auth-box">
 
@@ -82,12 +111,14 @@
                 Login to continue chatting
             </p>
 
+
             <input
                 type="text"
                 id="username"
                 placeholder="Username"
                 autocomplete="username"
             >
+
 
             <input
                 type="password"
@@ -96,15 +127,24 @@
                 autocomplete="current-password"
             >
 
-            <button onclick="login()">
+
+            <button
+                onclick="login()"
+            >
                 Login
             </button>
 
+
             <p class="switch-text">
+
                 Don't have an account?
-                <span onclick="showRegister()">
+
+                <span
+                    onclick="showRegister()"
+                >
                     Register
                 </span>
+
             </p>
 
         </div>
@@ -112,9 +152,10 @@
     </div>
 
 
-    <!-- ==============================
+
+    <!-- ==================================================
          CHAT APPLICATION
-    =============================== -->
+    =================================================== -->
 
     <div
         id="chat-container"
@@ -122,29 +163,42 @@
         style="display:none;"
     >
 
-        <!-- ==============================
+
+        <!-- ==================================================
              SIDEBAR
-        =============================== -->
+        =================================================== -->
 
         <div class="sidebar">
+
+
+            <!-- SIDEBAR HEADER -->
 
             <div class="sidebar-header">
 
                 <div class="app-title">
 
-    <div class="app-logo">
-        💬
-    </div>
+                    <div class="app-logo">
+                        💬
+                    </div>
 
-    <div>
-        <h2>ChatApp</h2>
 
-        <span id="logged-user">
-            Welcome
-        </span>
-    </div>
+                    <div>
 
-</div>
+                        <h2>
+                            ChatApp
+                        </h2>
+
+
+                        <span id="logged-user">
+                            Welcome
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- LOGOUT -->
 
                 <div class="header-actions">
                 <button
@@ -177,13 +231,17 @@
             </div>
 
 
-            <!-- SEARCH -->
+
+            <!-- ==================================================
+                 SEARCH
+            =================================================== -->
 
             <div class="search-container">
 
                 <span class="search-icon">
                     🔎
                 </span>
+
 
                 <input
                     type="text"
@@ -195,12 +253,16 @@
             </div>
 
 
-            <!-- CHAT LIST -->
+
+            <!-- ==================================================
+                 CHAT LIST
+            =================================================== -->
 
             <div class="chat-list-header">
                 <span>CHATS</span>
                 <button id="create-group-button" class="list-action" type="button">+ Group</button>
             </div>
+
 
             <div
                 id="user-list"
@@ -226,6 +288,7 @@
                     © 2026 ChatApp
                 </span>
 
+
                 <span>
                     V2.1
                 </span>
@@ -235,11 +298,13 @@
         </div>
 
 
-        <!-- ==============================
+
+        <!-- ==================================================
              MAIN CHAT
-        =============================== -->
+        =================================================== -->
 
         <div class="main-chat">
+
 
             <!-- CHAT HEADER -->
 
@@ -258,6 +323,7 @@
 
                 <div class="chat-user-info">
 
+
                     <div
                         id="chat-avatar"
                         class="chat-avatar"
@@ -265,11 +331,13 @@
                         ?
                     </div>
 
+
                     <div>
 
                         <h3 id="chat-username">
                             Select a user
                         </h3>
+
 
                         <span
                             id="chat-status"
@@ -291,7 +359,10 @@
             </div>
 
 
-            <!-- MESSAGES -->
+
+            <!-- ==================================================
+                 MESSAGES
+            =================================================== -->
 
             <div
                 id="messages"
@@ -304,9 +375,11 @@
                         💬
                     </div>
 
+
                     <h3>
                         Welcome to ChatApp
                     </h3>
+
 
                     <p>
                         Select a user from the left
@@ -318,24 +391,33 @@
             </div>
 
 
-            <!-- TYPING INDICATOR -->
+
+            <!-- ==================================================
+                 TYPING INDICATOR
+            =================================================== -->
 
             <div
                 id="typing-indicator"
                 class="typing-indicator"
                 style="display:none;"
             >
+
                 <span></span>
                 <span></span>
                 <span></span>
+
 
                 <label>
                     typing...
                 </label>
+
             </div>
 
 
-            <!-- MESSAGE INPUT -->
+
+            <!-- ==================================================
+                 MESSAGE INPUT
+            =================================================== -->
 
             <div class="message-footer">
 
@@ -351,6 +433,7 @@
                     disabled
                 >
 
+
                 <button
                     id="send-button"
                     onclick="sendMessage()"
@@ -365,13 +448,17 @@
             <div id="attachment-preview" class="attachment-preview" style="display:none;"></div>
 
 
-            <!-- MAIN FOOTER -->
+
+            <!-- ==================================================
+                 MAIN FOOTER
+            =================================================== -->
 
             <div class="main-footer">
 
                 <span>
                     🔒 Your messages are private
                 </span>
+
 
                 <span>
                     ChatApp V2.1
@@ -506,7 +593,11 @@
 
     <script src="/socket.io/socket.io.js"></script>
 
+
+    <!-- APPLICATION JS -->
+
     <script src="app.js"></script>
+
 
 </body>
 
