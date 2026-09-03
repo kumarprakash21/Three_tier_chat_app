@@ -452,6 +452,17 @@ Check for remaining Kind containers:
 docker ps
 ```
 
+For a guided full cleanup, use the separate script:
+
+```bash
+chmod +x cleanup.sh
+./cleanup.sh
+```
+
+The script asks for confirmation, removes the `chatapp` and `ingress-nginx`
+namespaces, and deletes the Kind cluster. It does not remove Docker Compose
+volumes.
+
 These delete commands are destructive. Do not delete the namespace or cluster
 if you need to preserve its database or uploaded files.
 
