@@ -257,7 +257,76 @@ npm start
 
 Open `http://localhost:3000` in a browser.
 
-## Run with Docker
+## Deployment options
+
+The application can be deployed in three stages:
+
+1. Run Node.js directly on a Linux server.
+2. Package the application with Docker and Docker Compose.
+3. Deploy the container to Kubernetes.
+
+### 1. Deploy directly on a Linux server
+
+Install Node.js, npm, Git, and MongoDB on the server, or use a managed MongoDB
+database. Then clone and install the application:
+
+```bash
+git clone YOUR_REPOSITORY_URL Three_tier_chat_app
+cd Three_tier_chat_app
+npm ci --omit=dev
+cp .env.example .env
+```
+
+If `.env.example` does not exist, create `.env` manually:
+
+```env
+PORT=3000
+MONGODB_URI=mongodb://127.0.0.1:27017/chatapp
+JWT_SECRET=replace-with-a-long-random-secret
+```
+
+Test the application:
+
+```bash
+npm start
+curl http://127.0.0.1:3000
+```
+
+For a server deployment, run the app as a `systemd` service so it starts on
+boot and restarts after a failure. Create `/etc/systemd/system/chatapp.service`:
+
+```ini
+[Unit]
+Description=ChatApp Node.js application
+After=network.target
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/home/azureuser/Three_tier_chat_app
+EnvironmentFile=/home/azureuser/Three_tier_chat_app/.env
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Replace `azureuser` and the paths with your Linux username and project path,
+then run:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now chatapp
+sudo systemctl status chatapp
+sudo journalctl -u chatapp -f
+```
+
+The direct server URL is `http://SERVER_PUBLIC_IP:3000`. For production, put
+Nginx or another reverse proxy in front of Node.js and expose ports 80/443.
+
+### 2. Run with Docker Compose
 
 Build and start the application with MongoDB:
 
@@ -279,6 +348,13 @@ Stop the services with:
 
 ```bash
 docker compose down
+```
+
+To run only the Docker image instead of Compose:
+
+```bash
+docker build -t chatapp:1.0 .
+docker run --env-file .env -p 3000:3000 -v chatapp_uploads:/app/uploads chatapp:1.0
 ```
 
 ## Deploy to Kubernetes
@@ -341,6 +417,44 @@ when the cluster has a default StorageClass. Use managed MongoDB for
 production unless you also plan backups, monitoring, upgrades, and replica
 set management.
 
+### Kubernetes cleanup
+
+Remove only the ChatApp resources:
+
+```bash
+kubectl delete namespace chatapp
+```
+
+Remove only the NGINX Ingress controller:
+
+```bash
+kubectl delete namespace ingress-nginx
+```
+
+Delete the complete Kind cluster:
+
+```bash
+kind delete cluster
+```
+
+Deleting the `chatapp` namespace removes the application Deployment, Service,
+Ingress, Secrets, and upload storage claim. Deleting the Kind cluster removes
+all Kubernetes resources and data stored inside that cluster. Recreate a clean
+Kind cluster with:
+
+```bash
+kind create cluster --config kind-config.yaml
+```
+
+Check for remaining Kind containers:
+
+```bash
+docker ps
+```
+
+These delete commands are destructive. Do not delete the namespace or cluster
+if you need to preserve its database or uploaded files.
+
 ## Security Notes
 
 - Protected endpoints require a Bearer JWT in the `Authorization` header.
@@ -353,13 +467,11 @@ set management.
 
 ## Current Roadmap
 
-Planned improvements include:
+Future improvements include:
 
 - Group conversations.
 - File and image sharing.
 - Message reactions.
 - Push notifications.
 - Advanced message search.
-- Docker and Docker Compose support.
-- Kubernetes and Helm deployment manifests.
 - Health checks, monitoring, logging, and autoscaling.
