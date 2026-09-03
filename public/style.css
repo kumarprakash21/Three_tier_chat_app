@@ -1560,6 +1560,15 @@ html.app-loading body {
     display: none;
 }
 
+#group-picture-input {
+    display: none;
+}
+
+.group-picture-upload {
+    display: inline-block;
+    margin-bottom: 10px;
+}
+
 .profile-picture-editor small {
     color: #94a3b8;
     font-size: 10px;

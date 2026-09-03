@@ -27,6 +27,7 @@ let currentProfile = {
 };
 
 let cropImage = null;
+let cropTarget = "profile";
 let cropZoom = 1;
 let cropOffsetX = 0;
 let cropOffsetY = 0;
@@ -214,7 +215,7 @@ document.getElementById("password-modal").addEventListener("click", event => {
     if (event.target.id === "password-modal") closePasswordForm();
 });
 
-document.getElementById("profile-picture-input").addEventListener("change", event => {
+function startImageCrop(event, target) {
     const file = event.target.files[0];
 
     if (!file) return;
@@ -225,6 +226,7 @@ document.getElementById("profile-picture-input").addEventListener("change", even
         return;
     }
 
+    cropTarget = target;
     const reader = new FileReader();
     reader.onload = () => {
         cropImage = new Image();
@@ -239,7 +241,10 @@ document.getElementById("profile-picture-input").addEventListener("change", even
         cropImage.src = reader.result;
     };
     reader.readAsDataURL(file);
-});
+}
+
+document.getElementById("profile-picture-input").addEventListener("change", event => startImageCrop(event, "profile"));
+document.getElementById("group-picture-input").addEventListener("change", event => startImageCrop(event, "group"));
 
 document.getElementById("crop-zoom").addEventListener("input", event => {
     cropZoom = Number(event.target.value);
@@ -300,22 +305,54 @@ function drawCrop() {
 function closeCropper() {
     cropImage = null;
     document.getElementById("profile-picture-input").value = "";
+    document.getElementById("group-picture-input").value = "";
     const modal = document.getElementById("crop-modal");
     modal.classList.remove("open");
     modal.setAttribute("aria-hidden", "true");
 }
 
-function applyCrop() {
+async function applyCrop() {
 
     if (!cropImage) return;
 
     const croppedImage = cropCanvas.toDataURL("image/jpeg", 0.88);
+    if (cropTarget === "group") {
+        try {
+            showToast("Uploading group picture...");
+            const attachment = await uploadAttachment(dataUrlToFile(croppedImage, "group-picture.jpg"));
+            const response = await profileRequest(`/api/groups/${selectedGroupId}/profile-picture`, {
+                method: "PATCH",
+                body: JSON.stringify({ profilePicture: attachment.url })
+            });
+            const data = await response.json();
+            if (!response.ok) return showToast(data.message || "Unable to update group picture", "error");
+            const group = groups.find(item => item._id === selectedGroupId);
+            if (group) {
+                group.profilePicture = data.profilePicture;
+                renderGroups();
+                openGroup(group);
+            }
+            closeCropper();
+            showToast("Group picture updated", "success");
+        } catch (error) {
+            showToast(error.message, "error");
+        }
+        return;
+    }
     const preview = document.getElementById("profile-preview");
     preview.style.backgroundImage = `url("${croppedImage}")`;
     preview.classList.add("has-image");
     currentProfile.profilePicture = croppedImage;
     closeCropper();
     showToast("Photo cropped. Save your profile to apply it.", "success");
+}
+
+function dataUrlToFile(dataUrl, filename) {
+    const [header, base64] = dataUrl.split(",");
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+    return new File([bytes], filename, { type: header.match(/data:(.*);base64/)[1] });
 }
 
 const emojiList = ["😀", "😂", "😍", "🥳", "😊", "😎", "😭", "😡", "👍", "👎", "❤️", "🔥", "🎉", "👏", "🙏", "✅", "💯", "✨", "🤝", "🚀"];
@@ -614,9 +651,11 @@ async function register() {
         }
 
 
-        alert(
-            "Registration successful"
-        );
+        await showActionModal({
+            title: "Registration completed",
+            message: "Your account has been created successfully. You can now log in.",
+            confirmLabel: "Continue"
+        });
 
 
         document.getElementById(
@@ -652,6 +691,9 @@ LOGIN
 
 async function login() {
 
+    const loginButton = document.querySelector("#login-page button");
+    if (loginButton.disabled) return;
+
     const loginUsername =
         document
             .getElementById("username")
@@ -666,12 +708,17 @@ async function login() {
 
     if (!loginUsername || !password) {
 
-        alert(
-            "Please enter username and password"
-        );
+        await showActionModal({
+            title: "Login required",
+            message: "Please enter both username and password.",
+            confirmLabel: "OK"
+        });
 
         return;
     }
+
+    loginButton.disabled = true;
+    loginButton.textContent = "Signing in...";
 
 
     try {
@@ -707,10 +754,11 @@ async function login() {
 
         if (!response.ok) {
 
-            alert(
-                data.message ||
-                "Login failed"
-            );
+            await showActionModal({
+                title: "Login failed",
+                message: data.message || "Invalid username or password.",
+                confirmLabel: "Try again"
+            });
 
             return;
         }
@@ -785,10 +833,15 @@ document.getElementById(
 
         console.error(error);
 
-        alert(
-            "Unable to connect to server"
-        );
+        await showActionModal({
+            title: "Connection problem",
+            message: "Unable to connect to the server. Please try again.",
+            confirmLabel: "OK"
+        });
 
+    } finally {
+        loginButton.disabled = false;
+        loginButton.textContent = "Login";
     }
 
 }
@@ -2036,7 +2089,7 @@ function addMessage(data) {
 
         actions.appendChild(deleteButton);
 
-        if (data.groupId) {
+        if (data.groupId || selectedUserId) {
             const replyButton = document.createElement("button");
             replyButton.type = "button";
             replyButton.className = "message-action";
@@ -2092,6 +2145,13 @@ async function loadGroups() {
     if (!response.ok) return;
     groups = await response.json();
     renderGroups();
+    const selectedGroup = groups.find(group => group._id === selectedGroupId);
+    if (selectedGroup) {
+        const chatAvatar = document.getElementById("chat-avatar");
+        chatAvatar.textContent = selectedGroup.name.charAt(0).toUpperCase();
+        chatAvatar.style.backgroundImage = selectedGroup.profilePicture ? `url("${selectedGroup.profilePicture}")` : "";
+        chatAvatar.classList.toggle("has-image", Boolean(selectedGroup.profilePicture));
+    }
     if (socket) socket.emit("join groups", groups.map(group => group._id));
 }
 
@@ -2102,6 +2162,15 @@ function renderGroups() {
         const item = document.createElement("div");
         item.className = `user-item group-item${group._id === selectedGroupId ? " active" : ""}`;
         item.innerHTML = `<div class="user-avatar group-avatar">${escapeHtml(group.name.charAt(0).toUpperCase())}</div><div class="user-info"><div class="user-name">${escapeHtml(group.name)}</div><div class="last-message">${group.members.length} members${group.muted ? " · muted" : ""}</div></div>`;
+        const avatar = item.querySelector(".group-avatar");
+        if (group.profilePicture) {
+            avatar.textContent = "";
+            const avatarImage = document.createElement("img");
+            avatarImage.src = group.profilePicture;
+            avatarImage.alt = `${group.name} group picture`;
+            avatar.appendChild(avatarImage);
+            avatar.classList.add("has-image");
+        }
         item.addEventListener("click", () => openGroup(group));
         list.appendChild(item);
     });
@@ -2124,9 +2193,10 @@ async function openGroup(group) {
     if (socket) socket.emit("join groups", [group._id]);
     document.getElementById("chat-username").textContent = group.name;
     document.getElementById("chat-status").textContent = `${group.members.length} members`;
-    document.getElementById("chat-avatar").textContent = group.name.charAt(0).toUpperCase();
-    document.getElementById("chat-avatar").style.backgroundImage = "";
-    document.getElementById("chat-avatar").classList.remove("has-image");
+    const chatAvatar = document.getElementById("chat-avatar");
+    chatAvatar.textContent = group.name.charAt(0).toUpperCase();
+    chatAvatar.style.backgroundImage = group.profilePicture ? `url("${group.profilePicture}")` : "";
+    chatAvatar.classList.toggle("has-image", Boolean(group.profilePicture));
     document.getElementById("mute-group-button").style.display = "inline-block";
     document.getElementById("mute-group-button").textContent = group.muted ? "Unmute" : "Mute";
     document.getElementById("manage-group-button").style.display = "inline-block";
@@ -2395,12 +2465,15 @@ async function sendMessage() {
             message:
                 text,
 
-            attachment
+            attachment,
+
+            replyTo: pendingReply
 
         }
     );
 
 
+    pendingReply = null;
     input.value = "";
     clearAttachment();
 

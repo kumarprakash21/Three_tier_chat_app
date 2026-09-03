@@ -318,7 +318,9 @@ app.post(
                 await User.findOne({
                     username:
                         username.trim()
-                });
+                })
+                    .select("username password")
+                    .lean();
 
 
             if (!user) {
@@ -1159,6 +1161,24 @@ app.patch("/api/groups/:groupId/mute", authenticateToken, async (req, res) => {
     }
 });
 
+app.patch("/api/groups/:groupId/profile-picture", authenticateToken, async (req, res) => {
+    try {
+        const group = await Group.findOne({ _id: req.params.groupId, admins: req.user.id });
+        if (!group) return res.status(403).json({ message: "Only group admins can change the group picture" });
+        const profilePicture = String(req.body.profilePicture || "");
+        if (profilePicture && !/^(https?:\/\/|\/uploads\/)/i.test(profilePicture)) {
+            return res.status(400).json({ message: "Invalid group picture" });
+        }
+        group.profilePicture = profilePicture;
+        await group.save();
+        io.emit("group updated", { groupId: group._id.toString() });
+        res.json({ profilePicture: group.profilePicture });
+    } catch (error) {
+        console.error("Group picture error:", error);
+        res.status(500).json({ message: "Unable to update group picture" });
+    }
+});
+
 
 /*
 ==================================================
@@ -1264,13 +1284,31 @@ io.on(
         socket.on("message reaction", async data => {
             try {
                 const message = await Message.findOne({ _id: data.messageId });
-                if (!message || !message.group) return;
-                const group = await Group.findOne({ _id: message.group, members: userId });
-                if (!group || !data.emoji) return;
+                if (!message || !data.emoji) return;
+
+                let recipients = [];
+                if (message.group) {
+                    const group = await Group.findOne({ _id: message.group, members: userId });
+                    if (!group) return;
+                    recipients = group.members
+                        .map(member => onlineUsers.get(member.toString()))
+                        .filter(Boolean);
+                } else if (
+                    message.sender.toString() === userId ||
+                    message.receiver?.toString() === userId
+                ) {
+                    recipients = [message.sender.toString(), message.receiver?.toString()]
+                        .filter(Boolean)
+                        .map(id => onlineUsers.get(id))
+                        .filter(Boolean);
+                } else {
+                    return;
+                }
+
                 message.reactions = message.reactions.filter(reaction => reaction.user.toString() !== userId);
                 message.reactions.push({ user: userId, emoji: String(data.emoji).slice(0, 8) });
                 await message.save();
-                io.to(`group:${group._id}`).emit("message reaction", {
+                io.to(recipients).emit("message reaction", {
                     messageId: message._id.toString(),
                     reactions: message.reactions
                 });
@@ -1313,7 +1351,8 @@ io.on(
                     const {
                         receiverId,
                         message,
-                        attachment
+                        attachment,
+                        replyTo
                     } = data;
 
 
@@ -1382,7 +1421,10 @@ io.on(
                                 cleanMessage,
 
                             attachment:
-                                attachment || undefined
+                                attachment || undefined,
+
+                            replyTo:
+                                replyTo || undefined
 
                         });
 
@@ -1414,6 +1456,12 @@ io.on(
 
                         attachment:
                             attachment || null,
+
+                        replyTo:
+                            replyTo || null,
+
+                        reactions:
+                            [],
 
                         read:
                             false,
