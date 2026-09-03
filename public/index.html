@@ -7,261 +7,325 @@
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0">
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <title>ChatApp V2</title>
+    <title>ChatApp V2.1</title>
 
     <link
         rel="stylesheet"
-        href="style.css">
+        href="style.css"
+    >
 
 </head>
 
 <body>
 
 
-<!-- ======================================
-     REGISTER
-====================================== -->
+    <!-- ==================================================
+         REGISTER PAGE
+    =================================================== -->
 
-<div
-    id="register-page"
-    class="auth-page">
+    <div
+        id="register-page"
+        class="auth-page"
+    >
 
-    <div class="auth-card">
+        <div class="auth-box">
 
-        <div class="logo">
-            💬
-        </div>
+            <div class="logo">
+                💬
+            </div>
 
-        <h1>Create Account</h1>
+            <h2>Create Account</h2>
 
-        <p class="auth-subtitle">
-            Create your ChatApp account
-        </p>
+            <p class="auth-subtitle">
+                Join ChatApp today
+            </p>
 
-        <input
-            id="regUsername"
-            type="text"
-            placeholder="Username">
 
-        <input
-            id="regPassword"
-            type="password"
-            placeholder="Password">
+            <input
+                type="text"
+                id="regUsername"
+                placeholder="Username"
+                autocomplete="username"
+            >
 
-        <button
-            class="primary-button"
-            onclick="register()">
 
-            Register
+            <input
+                type="password"
+                id="regPassword"
+                placeholder="Password"
+                autocomplete="new-password"
+            >
 
-        </button>
-
-        <p class="switch-text">
-
-            Already have an account?
 
             <button
-                class="link-button"
-                onclick="showLogin()">
-
-                Login
-
-            </button>
-
-        </p>
-
-    </div>
-
-</div>
-
-
-<!-- ======================================
-     LOGIN
-====================================== -->
-
-<div
-    id="login-page"
-    class="auth-page hidden">
-
-    <div class="auth-card">
-
-        <div class="logo">
-            💬
-        </div>
-
-        <h1>Welcome Back</h1>
-
-        <p class="auth-subtitle">
-            Login to your account
-        </p>
-
-        <input
-            id="username"
-            type="text"
-            placeholder="Username">
-
-        <input
-            id="password"
-            type="password"
-            placeholder="Password">
-
-        <button
-            class="primary-button"
-            onclick="login()">
-
-            Login
-
-        </button>
-
-        <p class="switch-text">
-
-            Don't have an account?
-
-            <button
-                class="link-button"
-                onclick="showRegister()">
-
+                onclick="register()"
+            >
                 Register
-
             </button>
 
-        </p>
 
-    </div>
+            <p class="switch-text">
 
-</div>
-
-
-<!-- ======================================
-     CHAT APP
-====================================== -->
-
-<div
-    id="chat-container"
-    class="chat-app hidden">
-
-
-    <!-- SIDEBAR -->
-
-    <aside class="sidebar">
-
-        <div class="sidebar-header">
-
-            <div class="brand">
-
-                <div class="brand-icon">
-                    💬
-                </div>
-
-                <div>
-
-                    <h2>ChatApp</h2>
-
-                    <span>
-                        Private messaging
-                    </span>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- PROFILE -->
-
-        <div class="profile-card">
-
-            <div
-                id="profile-avatar"
-                class="avatar">
-
-                U
-
-            </div>
-
-            <div class="profile-info">
-
-                <strong id="profile-name">
-                    User
-                </strong>
-
-                <span>
-
-                    <span class="online-dot"></span>
-
-                    Online
-
-                </span>
-
-            </div>
-
-        </div>
-
-
-        <!-- USERS -->
-
-        <div class="users-section">
-
-            <div class="section-title">
-
-                <span>
-                    USERS
-                </span>
+                Already have an account?
 
                 <span
-                    id="online-count"
-                    class="user-count">
+                    onclick="showLogin()"
+                >
+                    Login
+                </span>
 
-                    0
+            </p>
 
+        </div>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         LOGIN PAGE
+    =================================================== -->
+
+    <div
+        id="login-page"
+        class="auth-page"
+        style="display:none;"
+    >
+
+        <div class="auth-box">
+
+            <div class="logo">
+                💬
+            </div>
+
+            <h2>Welcome Back</h2>
+
+            <p class="auth-subtitle">
+                Login to continue chatting
+            </p>
+
+
+            <input
+                type="text"
+                id="username"
+                placeholder="Username"
+                autocomplete="username"
+            >
+
+
+            <input
+                type="password"
+                id="password"
+                placeholder="Password"
+                autocomplete="current-password"
+            >
+
+
+            <button
+                onclick="login()"
+            >
+                Login
+            </button>
+
+
+            <p class="switch-text">
+
+                Don't have an account?
+
+                <span
+                    onclick="showRegister()"
+                >
+                    Register
+                </span>
+
+            </p>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         CHAT APPLICATION
+    =================================================== -->
+
+    <div
+        id="chat-container"
+        class="chat-container"
+        style="display:none;"
+    >
+
+
+        <!-- ==================================================
+             SIDEBAR
+        =================================================== -->
+
+        <div class="sidebar">
+
+
+            <!-- SIDEBAR HEADER -->
+
+            <div class="sidebar-header">
+
+                <div class="app-title">
+
+                    <div class="app-logo">
+                        💬
+                    </div>
+
+
+                    <div>
+
+                        <h2>
+                            ChatApp
+                        </h2>
+
+
+                        <span id="logged-user">
+                            Welcome
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- LOGOUT -->
+
+                <button
+                    class="logout-button"
+                    onclick="logout()"
+                    title="Logout"
+                >
+                    🚪
+                </button>
+
+
+                <!-- DELETE ACCOUNT -->
+
+                <button
+                    type="button"
+                    onclick="deleteAccount()"
+                    class="delete-account-button"
+                    title="Delete Account"
+                >
+                    🗑️
+                </button>
+
+            </div>
+
+
+
+            <!-- ==================================================
+                 SEARCH
+            =================================================== -->
+
+            <div class="search-container">
+
+                <span class="search-icon">
+                    🔎
+                </span>
+
+
+                <input
+                    type="text"
+                    id="searchUser"
+                    placeholder="Search users..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+
+
+            <!-- ==================================================
+                 CHAT LIST
+            =================================================== -->
+
+            <div class="chat-list-header">
+
+                <span>
+                    CHATS
                 </span>
 
             </div>
 
 
-            <div id="online-users">
+            <div
+                id="user-list"
+                class="user-list"
+            >
+
+                <div class="loading">
+                    Loading users...
+                </div>
+
+            </div>
+
+
+
+            <!-- ==================================================
+                 SIDEBAR FOOTER
+            =================================================== -->
+
+            <div class="sidebar-footer">
+
+                <span>
+                    © 2026 ChatApp
+                </span>
+
+
+                <span>
+                    V2.1
+                </span>
 
             </div>
 
         </div>
 
-    </aside>
 
 
-    <!-- MAIN CHAT -->
+        <!-- ==================================================
+             MAIN CHAT
+        =================================================== -->
 
-    <main class="chat-main">
+        <div class="main-chat">
 
 
-        <!-- HEADER -->
+            <!-- CHAT HEADER -->
 
-        <header class="chat-header">
+            <div
+                id="chat-header"
+                class="chat-header"
+            >
 
-            <div class="chat-title">
+                <div class="chat-user-info">
 
-                <div
-                    id="chat-header-avatar"
-                    class="avatar">
 
-                    💬
+                    <div
+                        id="chat-avatar"
+                        class="chat-avatar"
+                    >
+                        ?
+                    </div>
 
-                </div>
 
-                <div>
+                    <div>
 
-                    <h2 id="chat-user-name">
-                        Select a user
-                    </h2>
+                        <h3 id="chat-username">
+                            Select a user
+                        </h3>
 
-                    <div class="status-text">
 
-                        <span class="online-dot"></span>
-
-                        <span id="status-text">
-                            Choose someone to chat
+                        <span
+                            id="chat-status"
+                            class="chat-status"
+                        >
+                            Choose someone to start chatting
                         </span>
 
                     </div>
@@ -271,131 +335,240 @@
             </div>
 
 
-            <div class="header-actions">
 
-                <button
-                    class="icon-button"
-                    onclick="toggleTheme()">
+            <!-- ==================================================
+                 MESSAGES
+            =================================================== -->
 
-                    🌙
+            <div
+                id="messages"
+                class="messages"
+            >
 
-                </button>
+                <div class="empty-chat">
 
-
-                <button
-                    class="top-logout-button"
-                    onclick="logout()">
-
-                    🚪 Logout
-
-                </button>
-
-            </div>
-
-        </header>
+                    <div class="empty-icon">
+                        💬
+                    </div>
 
 
-        <!-- MESSAGES -->
+                    <h3>
+                        Welcome to ChatApp
+                    </h3>
 
-        <section
-            id="messages"
-            class="chat-box">
 
-            <div class="welcome-message">
+                    <p>
+                        Select a user from the left
+                        to start a conversation.
+                    </p>
 
-                <div class="welcome-icon">
-                    💬
                 </div>
 
-                <h3>
-                    Select a user
-                </h3>
+            </div>
 
-                <p>
-                    Choose someone from the user list to start chatting.
-                </p>
+
+
+            <!-- ==================================================
+                 TYPING INDICATOR
+            =================================================== -->
+
+            <div
+                id="typing-indicator"
+                class="typing-indicator"
+                style="display:none;"
+            >
+
+                <span></span>
+                <span></span>
+                <span></span>
+
+
+                <label>
+                    typing...
+                </label>
 
             </div>
 
-        </section>
 
 
-        <!-- TYPING -->
+            <!-- ==================================================
+                 MESSAGE INPUT
+            =================================================== -->
 
-        <div
-            id="typing-indicator"
-            class="typing-indicator hidden">
+            <div class="message-footer">
 
-            <span id="typing-user"></span>
 
-            <span>
-                is typing
-            </span>
+                <input
+                    type="text"
+                    id="msg"
+                    placeholder="Select a user first..."
+                    autocomplete="off"
+                    disabled
+                >
 
-            <span class="typing-dots">
 
-                <i></i>
-                <i></i>
-                <i></i>
+                <button
+                    id="send-button"
+                    onclick="sendMessage()"
+                    disabled
+                >
+                    ➤
+                </button>
 
-            </span>
+            </div>
+
+
+
+            <!-- ==================================================
+                 MAIN FOOTER
+            =================================================== -->
+
+            <div class="main-footer">
+
+                <span>
+                    🔒 Your messages are private
+                </span>
+
+
+                <span>
+                    ChatApp V2.1
+                </span>
+
+            </div>
 
         </div>
 
+    </div>
 
-        <!-- INPUT -->
 
-        <footer class="message-footer">
 
-            <div class="message-input-container">
+    <!-- ==================================================
+         CUSTOM NOTIFICATION MODAL
+    =================================================== -->
 
-                <textarea
-                    id="msg"
-                    placeholder="Select a user first..."
-                    rows="1"
-                    disabled></textarea>
+    <div
+        id="notification-modal"
+        class="modal-overlay"
+        style="display:none;"
+    >
+
+        <div class="modal-box notification-box">
+
+
+            <div
+                id="notification-icon"
+                class="modal-icon"
+            >
+                ✓
+            </div>
+
+
+            <h2 id="notification-title">
+                Success
+            </h2>
+
+
+            <p id="notification-message">
+                Operation completed successfully.
+            </p>
+
+
+            <button
+                id="notification-button"
+                class="modal-primary-button"
+                onclick="closeNotification()"
+            >
+                Continue
+            </button>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         DELETE ACCOUNT MODAL
+    =================================================== -->
+
+    <div
+        id="delete-modal"
+        class="modal-overlay"
+        style="display:none;"
+    >
+
+        <div class="modal-box delete-modal-box">
+
+
+            <div class="modal-icon delete-icon">
+                ⚠️
+            </div>
+
+
+            <h2>
+                Delete Account?
+            </h2>
+
+
+            <p>
+                This action cannot be undone.
+            </p>
+
+
+            <div class="delete-warning">
+
+                <div>
+                    🗑️ Your account will be deleted
+                </div>
+
+                <div>
+                    💬 Your messages will be deleted
+                </div>
+
+                <div>
+                    🔐 Your login access will be removed
+                </div>
 
             </div>
 
-            <button
-                id="send-button"
-                class="send-button"
-                onclick="sendMessage()"
-                disabled>
 
-                ➤
+            <div class="modal-actions">
 
-            </button>
-
-        </footer>
+                <button
+                    class="modal-cancel-button"
+                    onclick="closeDeleteModal()"
+                >
+                    Cancel
+                </button>
 
 
-        <!-- APP FOOTER -->
+                <button
+                    class="modal-delete-button"
+                    onclick="confirmDeleteAccount()"
+                >
+                    Delete Account
+                </button>
 
-        <footer class="app-footer">
+            </div>
 
-            <span>
-                © 2026 ChatApp
-            </span>
+        </div>
 
-            <span>
-                •
-            </span>
-
-            <span>
-                Secure private messaging
-            </span>
-
-        </footer>
-
-    </main>
-
-</div>
+    </div>
 
 
-<script src="/socket.io/socket.io.js"></script>
 
-<script src="app.js"></script>
+    <!-- ==================================================
+         SOCKET.IO
+    =================================================== -->
+
+    <script src="/socket.io/socket.io.js"></script>
+
+
+    <!-- APPLICATION JS -->
+
+    <script src="app.js"></script>
+
 
 </body>
+
 </html>

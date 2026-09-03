@@ -2,31 +2,22 @@ require("dotenv").config();
 
 const express = require("express");
 const http = require("http");
-
 const { Server } = require("socket.io");
-
 const mongoose = require("mongoose");
-
 const bcrypt = require("bcryptjs");
-
 const jwt = require("jsonwebtoken");
-
 const cors = require("cors");
-
 const path = require("path");
 
 const User = require("./models/User");
-
 const Message = require("./models/Message");
-
-const authenticateToken =
-    require("./middleware/auth");
+const authenticateToken = require("./middleware/auth");
 
 
 /*
-=========================================
+==================================================
 APP CONFIGURATION
-=========================================
+==================================================
 */
 
 const app = express();
@@ -43,20 +34,17 @@ const io =
 
     });
 
-
 const PORT =
     process.env.PORT || 3000;
 
 
 /*
-=========================================
+==================================================
 MIDDLEWARE
-=========================================
+==================================================
 */
 
-app.use(
-    cors()
-);
+app.use(cors());
 
 app.use(
     express.json()
@@ -64,15 +52,18 @@ app.use(
 
 app.use(
     express.static(
-        path.join(__dirname, "public")
+        path.join(
+            __dirname,
+            "public"
+        )
     )
 );
 
 
 /*
-=========================================
-MONGODB CONNECTION
-=========================================
+==================================================
+MONGODB
+==================================================
 */
 
 mongoose
@@ -97,14 +88,11 @@ mongoose
 
 
 /*
-=========================================
+==================================================
 ONLINE USERS
-=========================================
 
-Map:
-
-socket.id -> userId
-
+userId -> socketId
+==================================================
 */
 
 const onlineUsers =
@@ -112,9 +100,9 @@ const onlineUsers =
 
 
 /*
-=========================================
-REGISTER API
-=========================================
+==================================================
+REGISTER
+==================================================
 */
 
 app.post(
@@ -129,11 +117,16 @@ app.post(
             } = req.body;
 
 
-            if (!username || !password) {
+            if (
+                !username ||
+                !password
+            ) {
 
                 return res.status(400).json({
+
                     message:
                         "Username and password are required"
+
                 });
 
             }
@@ -149,18 +142,24 @@ app.post(
             ) {
 
                 return res.status(400).json({
+
                     message:
                         "Username must be between 3 and 30 characters"
+
                 });
 
             }
 
 
-            if (password.length < 6) {
+            if (
+                password.length < 6
+            ) {
 
                 return res.status(400).json({
+
                     message:
                         "Password must be at least 6 characters"
+
                 });
 
             }
@@ -172,15 +171,20 @@ app.post(
 
             const existingUser =
                 await User.findOne({
-                    username: cleanUsername
+
+                    username:
+                        cleanUsername
+
                 });
 
 
             if (existingUser) {
 
                 return res.status(409).json({
+
                     message:
                         "Username already exists"
+
                 });
 
             }
@@ -220,7 +224,8 @@ app.post(
 
                 user: {
 
-                    id: user._id,
+                    id:
+                        user._id.toString(),
 
                     username:
                         user.username
@@ -239,8 +244,10 @@ app.post(
 
 
             res.status(500).json({
+
                 message:
                     "Server error"
+
             });
 
         }
@@ -250,9 +257,9 @@ app.post(
 
 
 /*
-=========================================
-LOGIN API
-=========================================
+==================================================
+LOGIN
+==================================================
 */
 
 app.post(
@@ -267,35 +274,48 @@ app.post(
             } = req.body;
 
 
-            if (!username || !password) {
+            if (
+                !username ||
+                !password
+            ) {
 
                 return res.status(400).json({
+
                     message:
                         "Username and password are required"
-                });
 
-            }
-
-
-            const user =
-                await User.findOne({
-                    username:
-                        username.trim()
-                });
-
-
-            if (!user) {
-
-                return res.status(401).json({
-                    message:
-                        "Invalid username or password"
                 });
 
             }
 
 
             /*
-            Compare password
+            Find user
+            */
+
+            const user =
+                await User.findOne({
+
+                    username:
+                        username.trim()
+
+                });
+
+
+            if (!user) {
+
+                return res.status(401).json({
+
+                    message:
+                        "Invalid username or password"
+
+                });
+
+            }
+
+
+            /*
+            Check password
             */
 
             const passwordMatch =
@@ -308,21 +328,24 @@ app.post(
             if (!passwordMatch) {
 
                 return res.status(401).json({
+
                     message:
                         "Invalid username or password"
+
                 });
 
             }
 
 
             /*
-            Create JWT
+            Generate JWT
             */
 
             const token =
                 jwt.sign(
 
                     {
+
                         id:
                             user._id.toString(),
 
@@ -334,8 +357,10 @@ app.post(
                     process.env.JWT_SECRET,
 
                     {
+
                         expiresIn:
                             "24h"
+
                     }
 
                 );
@@ -351,7 +376,7 @@ app.post(
                 user: {
 
                     id:
-                        user._id,
+                        user._id.toString(),
 
                     username:
                         user.username
@@ -370,8 +395,126 @@ app.post(
 
 
             res.status(500).json({
+
                 message:
                     "Server error"
+
+            });
+
+        }
+
+    }
+);
+
+/*
+==================================================
+DELETE USER ACCOUNT
+==================================================
+*/
+
+app.delete(
+    "/api/user",
+    authenticateToken,
+    async (req, res) => {
+
+        try {
+
+            const userId =
+                req.user.id;
+
+
+            /*
+            Delete all messages
+            belonging to this user
+            */
+
+            await Message.deleteMany({
+
+                $or: [
+
+                    {
+                        sender:
+                            userId
+                    },
+
+                    {
+                        receiver:
+                            userId
+                    }
+
+                ]
+
+            });
+
+
+            /*
+            Delete user
+            */
+
+            const deletedUser =
+                await User.findByIdAndDelete(
+                    userId
+                );
+
+
+            if (!deletedUser) {
+
+                return res.status(404).json({
+
+                    message:
+                        "User not found"
+
+                });
+
+            }
+
+
+            /*
+            Remove user from online users
+            */
+
+            onlineUsers.delete(
+                userId
+            );
+
+
+            /*
+            Notify all connected users
+            */
+
+            sendOnlineUsers();
+
+
+            io.emit(
+                "user deleted",
+                {
+                    userId:
+                        userId
+                }
+            );
+
+
+            res.json({
+
+                message:
+                    "Account deleted successfully"
+
+            });
+
+
+        } catch (error) {
+
+            console.error(
+                "Delete account error:",
+                error
+            );
+
+
+            res.status(500).json({
+
+                message:
+                    "Unable to delete account"
+
             });
 
         }
@@ -381,9 +524,17 @@ app.post(
 
 
 /*
-=========================================
+==================================================
 GET USERS
-=========================================
+
+Returns:
+
+- username
+- online status
+- last seen
+- last message
+- unread count
+==================================================
 */
 
 app.get(
@@ -393,51 +544,262 @@ app.get(
 
         try {
 
+            const currentUserId =
+                req.user.id;
+
+
+            /*
+            Get all users except current user
+            */
+
             const users =
                 await User.find(
-                    {},
+
+                    {
+                        _id: {
+                            $ne:
+                                currentUserId
+                        }
+                    },
+
                     "username lastSeen"
+
                 )
                 .sort({
-                    username: 1
+
+                    username:
+                        1
+
                 });
 
 
-            const result =
-                users.map(
-                    (user) => ({
+            const result = [];
 
-                        id:
-                            user._id,
 
-                        username:
-                            user.username,
+            /*
+            Build user list
+            */
 
-                        online:
-                            onlineUsers.has(
-                                user._id.toString()
-                            ),
+            for (
+                const user of users
+            ) {
 
-                        lastSeen:
-                            user.lastSeen
+                const otherUserId =
+                    user._id.toString();
+
+
+                /*
+                =================================
+                LAST MESSAGE
+                =================================
+                */
+
+                const lastMessage =
+                    await Message.findOne({
+
+                        $or: [
+
+                            {
+
+                                sender:
+                                    currentUserId,
+
+                                receiver:
+                                    otherUserId
+
+                            },
+
+                            {
+
+                                sender:
+                                    otherUserId,
+
+                                receiver:
+                                    currentUserId
+
+                            }
+
+                        ]
 
                     })
-                );
+                    .sort({
+
+                        createdAt:
+                            -1
+
+                    });
 
 
-            res.json(result);
+                /*
+                =================================
+                UNREAD COUNT
+                =================================
+
+                IMPORTANT:
+
+                read:false = unread
+                read:true  = already read
+                */
+
+                const unreadCount =
+                    await Message.countDocuments({
+
+                        sender:
+                            otherUserId,
+
+                        receiver:
+                            currentUserId,
+
+                        read:
+                            false
+
+                    });
+
+
+                /*
+                Add user
+                */
+
+                result.push({
+
+                    id:
+                        otherUserId,
+
+                    username:
+                        user.username,
+
+                    online:
+                        onlineUsers.has(
+                            otherUserId
+                        ),
+
+                    lastSeen:
+                        user.lastSeen,
+
+                    lastMessage:
+                        lastMessage
+                            ? {
+
+                                id:
+                                    lastMessage._id.toString(),
+
+                                message:
+                                    lastMessage.message,
+
+                                sender:
+                                    lastMessage.sender.toString(),
+
+                                receiver:
+                                    lastMessage.receiver.toString(),
+
+                                read:
+                                    lastMessage.read,
+
+                                timestamp:
+                                    lastMessage.createdAt
+
+                            }
+                            : null,
+
+                    unreadCount:
+                        unreadCount
+
+                });
+
+            }
+
+
+            /*
+            =================================
+            SORT USERS
+            =================================
+
+            1. Users with messages
+            2. Latest message first
+            3. Alphabetically
+            */
+
+            result.sort(
+                (a, b) => {
+
+                    /*
+                    User with message first
+                    */
+
+                    if (
+                        a.lastMessage &&
+                        !b.lastMessage
+                    ) {
+
+                        return -1;
+
+                    }
+
+
+                    if (
+                        !a.lastMessage &&
+                        b.lastMessage
+                    ) {
+
+                        return 1;
+
+                    }
+
+
+                    /*
+                    Latest message first
+                    */
+
+                    if (
+                        a.lastMessage &&
+                        b.lastMessage
+                    ) {
+
+                        return (
+
+                            new Date(
+                                b.lastMessage.timestamp
+                            ) -
+
+                            new Date(
+                                a.lastMessage.timestamp
+                            )
+
+                        );
+
+                    }
+
+
+                    /*
+                    Alphabetical
+                    */
+
+                    return a.username.localeCompare(
+                        b.username
+                    );
+
+                }
+            );
+
+
+            res.json(
+                result
+            );
 
 
         } catch (error) {
 
             console.error(
+                "Get users error:",
                 error
             );
 
 
             res.status(500).json({
+
                 message:
                     "Unable to get users"
+
             });
 
         }
@@ -447,9 +809,18 @@ app.get(
 
 
 /*
-=========================================
+==================================================
 GET CHAT HISTORY
-=========================================
+
+IMPORTANT:
+
+This API ONLY gets messages.
+
+It does NOT mark messages as read.
+
+Read status is handled by Socket.IO
+"mark read".
+==================================================
 */
 
 app.get(
@@ -466,79 +837,68 @@ app.get(
                 req.params.userId;
 
 
+            /*
+            Get conversation
+            */
+
             const messages =
                 await Message.find({
 
                     $or: [
 
                         {
+
                             sender:
                                 currentUser,
 
                             receiver:
                                 otherUser
+
                         },
 
                         {
+
                             sender:
                                 otherUser,
 
                             receiver:
                                 currentUser
+
                         }
 
                     ]
 
                 })
                 .sort({
-                    createdAt: 1
+
+                    createdAt:
+                        1
+
                 });
 
 
             /*
-            Mark received messages
-            as read
+            Return messages
             */
 
-            await Message.updateMany(
-
-                {
-
-                    sender:
-                        otherUser,
-
-                    receiver:
-                        currentUser,
-
-                    read:
-                        false
-
-                },
-
-                {
-
-                    $set: {
-                        read: true
-                    }
-
-                }
-
+            res.json(
+                messages
             );
-
-
-            res.json(messages);
 
 
         } catch (error) {
 
             console.error(
+                "Get messages error:",
                 error
             );
 
 
             res.status(500).json({
+
                 message:
                     "Unable to load messages"
+
             });
 
         }
@@ -548,9 +908,9 @@ app.get(
 
 
 /*
-=========================================
+==================================================
 SOCKET AUTHENTICATION
-=========================================
+==================================================
 */
 
 io.use(
@@ -573,6 +933,10 @@ io.use(
             }
 
 
+            /*
+            Verify JWT
+            */
+
             const decoded =
                 jwt.verify(
                     token,
@@ -589,6 +953,12 @@ io.use(
 
         } catch (error) {
 
+            console.error(
+                "Socket authentication error:",
+                error
+            );
+
+
             next(
                 new Error(
                     "Invalid token"
@@ -602,14 +972,26 @@ io.use(
 
 
 /*
-=========================================
+==================================================
 SOCKET CONNECTION
-=========================================
+==================================================
 */
 
 io.on(
     "connection",
     (socket) => {
+
+        console.log(
+            "User Connected:",
+            socket.id
+        );
+
+
+        /*
+        ==========================================
+        CURRENT USER
+        ==========================================
+        */
 
         const userId =
             socket.user.id;
@@ -618,13 +1000,10 @@ io.on(
             socket.user.username;
 
 
-        console.log(
-            `${username} connected`
-        );
-
-
         /*
-        Store online user
+        ==========================================
+        ADD USER ONLINE
+        ==========================================
         */
 
         onlineUsers.set(
@@ -633,407 +1012,263 @@ io.on(
         );
 
 
-        /*
-        Broadcast online status
-        */
-
-        io.emit(
-            "user online",
-            {
-                userId,
-                username
-            }
+        console.log(
+            `${username} is online`
         );
 
 
         /*
-        Send online users
+        Notify everyone
         */
 
         sendOnlineUsers();
 
 
         /*
-        ====================================
-        SEND MESSAGE
-        ====================================
-        */
+==================================================
+PRIVATE MESSAGE
+==================================================
+*/
 
-        socket.on(
-            "private message",
-            async (data) => {
+socket.on(
+    "private message",
+    async (data) => {
 
-                try {
+        try {
 
-                    const {
+            const {
+                receiverId,
+                message
+            } = data;
+
+
+            /*
+            Validate message
+            */
+
+            if (
+                !receiverId ||
+                !message
+            ) {
+
+                return;
+
+            }
+
+
+            const cleanMessage =
+                message.trim();
+
+
+            if (!cleanMessage) {
+
+                return;
+
+            }
+
+
+            /*
+            Maximum message length
+            */
+
+            if (
+                cleanMessage.length > 2000
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+            Verify receiver exists
+            */
+
+            const receiver =
+                await User.findById(
+                    receiverId
+                );
+
+
+            if (!receiver) {
+
+                console.log(
+                    "Receiver not found:",
+                    receiverId
+                );
+
+                return;
+
+            }
+
+
+            /*
+            =========================================
+            SAVE MESSAGE TO MONGODB
+            =========================================
+            */
+
+            const newMessage =
+                await Message.create({
+
+                    sender:
+                        userId,
+
+                    receiver:
                         receiverId,
-                        message
-                    } = data;
+
+                    message:
+                        cleanMessage,
+
+                    read:
+                        false
+
+                });
 
 
-                    if (
-                        !receiverId ||
-                        !message
-                    ) {
+            /*
+            =========================================
+            MESSAGE DATA
+            =========================================
+            */
 
-                        return;
+            const messageData = {
 
-                    }
+                id:
+                    newMessage._id.toString(),
 
+                sender:
+                    userId,
 
-                    const cleanMessage =
-                        message.trim();
+                receiver:
+                    receiverId,
 
+                message:
+                    cleanMessage,
 
-                    if (!cleanMessage) {
+                read:
+                    false,
 
-                        return;
+                edited:
+                    false,
 
-                    }
+                timestamp:
+                    newMessage.createdAt
 
-
-                    if (
-                        cleanMessage.length >
-                        2000
-                    ) {
-
-                        return;
-
-                    }
-
-
-                    /*
-                    Save message
-                    */
-
-                    const newMessage =
-                        await Message.create({
-
-                            sender:
-                                userId,
-
-                            receiver:
-                                receiverId,
-
-                            message:
-                                cleanMessage
-
-                        });
+            };
 
 
-                    /*
-                    Find receiver socket
-                    */
+            /*
+            =========================================
+            SEND MESSAGE BACK TO SENDER
+            =========================================
+            */
 
-                    const receiverSocket =
-                        onlineUsers.get(
-                            receiverId
-                        );
-
-
-                    const messageData = {
-
-                        id:
-                            newMessage._id,
-
-                        sender:
-                            userId,
-
-                        receiver:
-                            receiverId,
-
-                        message:
-                            cleanMessage,
-
-                        read:
-                            false,
-
-                        edited:
-                            false,
-
-                        timestamp:
-                            newMessage.createdAt
-
-                    };
+            socket.emit(
+                "private message",
+                messageData
+            );
 
 
-                    /*
-                    Send to sender
-                    */
+            /*
+            =========================================
+            SEND MESSAGE TO RECEIVER
+            =========================================
+            */
 
-                    socket.emit(
-                        "private message",
-                        messageData
-                    );
-
-
-                    /*
-                    Send to receiver
-                    */
-
-                    if (receiverSocket) {
-
-                        io.to(
-                            receiverSocket
-                        ).emit(
-                            "private message",
-                            messageData
-                        );
-
-                    }
+            const receiverSocket =
+                onlineUsers.get(
+                    receiverId
+                );
 
 
-                } catch (error) {
+            if (receiverSocket) {
 
-                    console.error(
-                        "Message error:",
-                        error
-                    );
-
-                }
+                io.to(
+                    receiverSocket
+                ).emit(
+                    "private message",
+                    messageData
+                );
 
             }
-        );
+
+
+            /*
+            =========================================
+            UPDATE CONVERSATION LIST
+            =========================================
+            */
+
+            socket.emit(
+                "conversation updated"
+            );
+
+
+            if (receiverSocket) {
+
+                io.to(
+                    receiverSocket
+                ).emit(
+                    "conversation updated"
+                );
+
+            }
+
+
+        } catch (error) {
+
+            console.error(
+                "Message error:",
+                error
+            );
+
+
+            socket.emit(
+                "message error",
+                {
+                    message:
+                        "Unable to send message"
+                }
+            );
+
+        }
+
+    }
+);
+
 
 
         /*
-        ====================================
-        TYPING
-        ====================================
-        */
-
-        socket.on(
-            "typing",
-            (receiverId) => {
-
-                const receiverSocket =
-                    onlineUsers.get(
-                        receiverId
-                    );
-
-
-                if (receiverSocket) {
-
-                    io.to(
-                        receiverSocket
-                    ).emit(
-                        "user typing",
-                        {
-                            userId,
-                            username
-                        }
-                    );
-
-                }
-
-            }
-        );
-
-
-        /*
-        ====================================
-        STOP TYPING
-        ====================================
-        */
-
-        socket.on(
-            "stop typing",
-            (receiverId) => {
-
-                const receiverSocket =
-                    onlineUsers.get(
-                        receiverId
-                    );
-
-
-                if (receiverSocket) {
-
-                    io.to(
-                        receiverSocket
-                    ).emit(
-                        "user stopped typing",
-                        {
-                            userId
-                        }
-                    );
-
-                }
-
-            }
-        );
-
-
-        /*
-        ====================================
-        READ MESSAGE
-        ====================================
+        ==========================================
+        MARK MESSAGES AS READ
+        ==========================================
         */
 
         socket.on(
             "mark read",
-            async (senderId) => {
+            async (otherUserId) => {
 
                 try {
 
-                    await Message.updateMany(
+                    /*
+                    Mark unread incoming
+                    messages as read
+                    */
 
-                        {
-
-                            sender:
-                                senderId,
-
-                            receiver:
-                                userId,
-
-                            read:
-                                false
-
-                        },
-
-                        {
-
-                            $set: {
-                                read: true
-                            }
-
-                        }
-
-                    );
-
-
-                    const senderSocket =
-                        onlineUsers.get(
-                            senderId
-                        );
-
-
-                    if (senderSocket) {
-
-                        io.to(
-                            senderSocket
-                        ).emit(
-                            "messages read",
-                            {
-                                userId
-                            }
-                        );
-
-                    }
-
-                } catch (error) {
-
-                    console.error(
-                        error
-                    );
-
-                }
-
-            }
-        );
-
-
-        /*
-        ====================================
-        DELETE MESSAGE
-        ====================================
-        */
-
-        socket.on(
-            "delete message",
-            async (messageId) => {
-
-                try {
-
-                    const message =
-                        await Message.findOne({
-                            _id:
-                                messageId,
-
-                            sender:
-                                userId
-                        });
-
-
-                    if (!message) {
-
-                        return;
-
-                    }
-
-
-                    await Message.deleteOne({
-                        _id:
-                            messageId
-                    });
-
-
-                    socket.emit(
-                        "message deleted",
-                        {
-                            messageId
-                        }
-                    );
-
-
-                    const receiverSocket =
-                        onlineUsers.get(
-                            message.receiver.toString()
-                        );
-
-
-                    if (receiverSocket) {
-
-                        io.to(
-                            receiverSocket
-                        ).emit(
-                            "message deleted",
-                            {
-                                messageId
-                            }
-                        );
-
-                    }
-
-                } catch (error) {
-
-                    console.error(
-                        error
-                    );
-
-                }
-
-            }
-        );
-
-
-        /*
-        ====================================
-        EDIT MESSAGE
-        ====================================
-        */
-
-        socket.on(
-            "edit message",
-            async (data) => {
-
-                try {
-
-                    const {
-                        messageId,
-                        message
-                    } = data;
-
-
-                    const updated =
-                        await Message.findOneAndUpdate(
+                    const result =
+                        await Message.updateMany(
 
                             {
-
-                                _id:
-                                    messageId,
 
                                 sender:
-                                    userId
+                                    otherUserId,
+
+                                receiver:
+                                    userId,
+
+                                read:
+                                    false
 
                             },
 
@@ -1041,79 +1276,90 @@ io.on(
 
                                 $set: {
 
-                                    message:
-                                        message.trim(),
-
-                                    edited:
+                                    read:
                                         true
 
                                 }
 
-                            },
-
-                            {
-                                new: true
                             }
 
                         );
 
 
-                    if (!updated) {
+                    console.log(
 
-                        return;
+                        `${username} read ${result.modifiedCount} messages from ${otherUserId}`
 
-                    }
-
-
-                    const messageData = {
-
-                        id:
-                            updated._id,
-
-                        sender:
-                            updated.sender,
-
-                        receiver:
-                            updated.receiver,
-
-                        message:
-                            updated.message,
-
-                        edited:
-                            true,
-
-                        timestamp:
-                            updated.createdAt
-
-                    };
-
-
-                    socket.emit(
-                        "message edited",
-                        messageData
                     );
 
 
-                    const receiverSocket =
+                    /*
+                    =================================
+                    NOTIFY SENDER
+                    =================================
+                    */
+
+                    const senderSocket =
                         onlineUsers.get(
-                            updated.receiver.toString()
+                            otherUserId
                         );
 
 
-                    if (receiverSocket) {
+                    if (
+                        senderSocket
+                    ) {
 
                         io.to(
-                            receiverSocket
+                            senderSocket
                         ).emit(
-                            "message edited",
-                            messageData
+
+                            "messages read",
+
+                            {
+
+                                userId:
+                                    userId
+
+                            }
+
                         );
 
                     }
+
+
+                    /*
+                    =================================
+                    UPDATE CURRENT USER
+                    =================================
+                    */
+
+                    socket.emit(
+
+                        "messages read",
+
+                        {
+
+                            userId:
+                                otherUserId
+
+                        }
+
+                    );
+
+
+                    /*
+                    Update conversation list
+                    */
+
+                    socket.emit(
+                        "conversation updated"
+                    );
+
 
                 } catch (error) {
 
                     console.error(
+                        "Mark read error:",
                         error
                     );
 
@@ -1124,9 +1370,116 @@ io.on(
 
 
         /*
-        ====================================
+        ==========================================
+        TYPING
+        ==========================================
+        */
+
+        socket.on(
+            "typing",
+            (otherUserId) => {
+
+                try {
+
+                    const receiverSocket =
+                        onlineUsers.get(
+                            otherUserId
+                        );
+
+
+                    if (
+                        receiverSocket
+                    ) {
+
+                        io.to(
+                            receiverSocket
+                        ).emit(
+
+                            "typing",
+
+                            {
+
+                                userId:
+                                    userId,
+
+                                username:
+                                    username
+
+                            }
+
+                        );
+
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        "Typing error:",
+                        error
+                    );
+
+                }
+
+            }
+        );
+
+
+        /*
+        ==========================================
+        STOP TYPING
+        ==========================================
+        */
+
+        socket.on(
+            "stop typing",
+            (otherUserId) => {
+
+                try {
+
+                    const receiverSocket =
+                        onlineUsers.get(
+                            otherUserId
+                        );
+
+
+                    if (
+                        receiverSocket
+                    ) {
+
+                        io.to(
+                            receiverSocket
+                        ).emit(
+
+                            "stop typing",
+
+                            {
+
+                                userId:
+                                    userId
+
+                            }
+
+                        );
+
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        "Stop typing error:",
+                        error
+                    );
+
+                }
+
+            }
+        );
+
+
+        /*
+        ==========================================
         DISCONNECT
-        ====================================
+        ==========================================
         */
 
         socket.on(
@@ -1138,33 +1491,47 @@ io.on(
                 );
 
 
+                /*
+                Remove from online users
+                */
+
                 onlineUsers.delete(
                     userId
                 );
 
 
-                await User.findByIdAndUpdate(
+                /*
+                Update last seen
+                */
 
-                    userId,
+                try {
 
-                    {
-                        lastSeen:
-                            new Date()
-                    }
+                    await User.findByIdAndUpdate(
 
-                );
-
-
-                io.emit(
-                    "user offline",
-                    {
                         userId,
-                        username,
-                        lastSeen:
-                            new Date()
-                    }
-                );
 
+                        {
+
+                            lastSeen:
+                                new Date()
+
+                        }
+
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "Last seen update error:",
+                        error
+                    );
+
+                }
+
+
+                /*
+                Notify everyone
+                */
 
                 sendOnlineUsers();
 
@@ -1176,27 +1543,30 @@ io.on(
 
 
 /*
-=========================================
-ONLINE USER LIST
-=========================================
+==================================================
+SEND ONLINE USERS
+==================================================
 */
 
 function sendOnlineUsers() {
 
     io.emit(
+
         "online users",
+
         Array.from(
             onlineUsers.keys()
         )
+
     );
 
 }
 
 
 /*
-=========================================
+==================================================
 START SERVER
-=========================================
+==================================================
 */
 
 server.listen(
