@@ -12,22 +12,23 @@ kubectl wait \
   --selector=app.kubernetes.io/component=controller \
   --timeout=120s
 
-kubectl wait \
-  --namespace ingress-nginx \
-  --for=condition=complete job/ingress-nginx-admission-create \
-  --timeout=120s
-
-kubectl wait \
-  --namespace ingress-nginx \
-  --for=condition=complete job/ingress-nginx-admission-patch \
-  --timeout=120s
-
 echo "Waiting for the Ingress admission webhook endpoint..."
-until kubectl get endpoints ingress-nginx-controller-admission \
-  --namespace ingress-nginx \
-  -o jsonpath='{.subsets[0].addresses[0].ip}' | grep -q .; do
+webhook_ready=false
+for attempt in {1..60}; do
+  if kubectl get endpoints ingress-nginx-controller-admission \
+    --namespace ingress-nginx \
+    -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null | grep -q .; then
+    webhook_ready=true
+    break
+  fi
   sleep 2
 done
+
+if [[ "${webhook_ready}" != "true" ]]; then
+  echo "Ingress admission webhook did not become ready in time."
+  kubectl get pods,services,endpoints -n ingress-nginx
+  exit 1
+fi
 
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/secret.yaml -n chatapp
