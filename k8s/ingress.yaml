@@ -8,8 +8,8 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: chat.example.com
-      http:
+    # No host makes this rule match the VM public IP as well as a domain name.
+    - http:
         paths:
           - path: /
             pathType: Prefix

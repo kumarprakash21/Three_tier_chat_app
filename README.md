@@ -293,8 +293,9 @@ docker push YOUR_DOCKERHUB_USERNAME/chatapp:1.0
 2. Copy `k8s/secret.example.yaml` to `k8s/secret.yaml`, then replace the JWT
 secret and MongoDB connection string. Keep `secret.yaml` out of source control.
 
-3. Replace `YOUR_DOCKERHUB_USERNAME/chatapp:1.0` in `k8s/deployment.yaml` and
-replace `chat.example.com` in `k8s/ingress.yaml` with your image and domain.
+3. Replace `YOUR_DOCKERHUB_USERNAME/chatapp:1.0` in `k8s/deployment.yaml` with
+your image. The included Ingress matches the VM IP directly. Add a `host` value
+and DNS record later when you have a real domain.
 
 4. Apply the manifests:
 
