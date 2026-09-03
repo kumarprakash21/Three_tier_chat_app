@@ -1116,6 +1116,24 @@ app.post("/api/groups", authenticateToken, async (req, res) => {
     }
 });
 
+app.delete("/api/groups/:groupId", authenticateToken, async (req, res) => {
+    try {
+        const group = await Group.findOne({ _id: req.params.groupId, owner: req.user.id });
+        if (!group) return res.status(403).json({ message: "Only the group owner can delete this group" });
+
+        await Promise.all([
+            Group.deleteOne({ _id: group._id }),
+            Message.deleteMany({ group: group._id })
+        ]);
+
+        io.emit("group deleted", { groupId: group._id.toString() });
+        res.json({ message: "Group deleted" });
+    } catch (error) {
+        console.error("Delete group error:", error);
+        res.status(500).json({ message: "Unable to delete group" });
+    }
+});
+
 app.get("/api/groups/:groupId/messages", authenticateToken, async (req, res) => {
     try {
         const group = await Group.findOne({ _id: req.params.groupId, members: req.user.id });

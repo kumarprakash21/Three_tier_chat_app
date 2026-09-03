@@ -459,6 +459,15 @@ html.app-loading body {
     cursor: pointer;
 }
 
+.group-delete-action {
+    background: #fff1f2 !important;
+    color: #e11d48 !important;
+}
+
+.group-delete-action:hover {
+    background: #ffe4e6 !important;
+}
+
 .list-action:hover,
 .chat-header-action:hover {
     background: #dbeafe;

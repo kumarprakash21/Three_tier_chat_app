@@ -172,6 +172,23 @@ function closeMobileChat() {
     document.getElementById("chat-container").classList.remove("mobile-chat-open");
 }
 
+function resetSelectedChat() {
+    selectedUserId = "";
+    selectedGroupId = "";
+    selectedUsername = "";
+    input.value = "";
+    input.disabled = true;
+    input.placeholder = "Select a user first...";
+    document.getElementById("send-button").disabled = true;
+    document.getElementById("chat-username").textContent = "Select a user";
+    document.getElementById("chat-status").textContent = "Choose someone to start chatting";
+    document.getElementById("mute-group-button").style.display = "none";
+    document.getElementById("manage-group-button").style.display = "none";
+    document.getElementById("delete-group-button").style.display = "none";
+    renderChatAvatar(document.getElementById("chat-avatar"), "?");
+    messages.innerHTML = `<div class="empty-chat"><div class="empty-icon">ðŸ’¬</div><h3>Welcome to ChatApp</h3><p>Select a user from the left to start chatting.</p></div>`;
+}
+
 function profileRequest(url, options = {}) {
     const token = localStorage.getItem("token");
 
@@ -183,6 +200,22 @@ function profileRequest(url, options = {}) {
             ...(options.headers || {})
         }
     });
+}
+
+async function loadCurrentProfile() {
+    try {
+        const response = await profileRequest("/api/profile");
+        if (!response.ok) return;
+
+        const profile = await response.json();
+        applyProfile(profile);
+        localStorage.setItem("user", JSON.stringify({
+            ...JSON.parse(localStorage.getItem("user") || "{}"),
+            ...profile
+        }));
+    } catch (error) {
+        console.error("Restore profile error:", error);
+    }
 }
 
 async function openProfile() {
@@ -417,6 +450,7 @@ document.addEventListener("click", event => {
 document.getElementById("create-group-button").addEventListener("click", createGroup);
 document.getElementById("mute-group-button").addEventListener("click", toggleGroupMute);
 document.getElementById("manage-group-button").addEventListener("click", manageGroup);
+document.getElementById("delete-group-button").addEventListener("click", deleteGroup);
 document.getElementById("group-members-modal").addEventListener("click", event => {
     if (event.target.id === "group-members-modal") closeGroupMembers();
 });
@@ -867,6 +901,7 @@ document.getElementById(
         */
 
         loadUsers();
+        loadCurrentProfile();
 
 
     } catch (error) {
@@ -1241,6 +1276,10 @@ function connectSocket() {
     });
 
     socket.on("group updated", () => loadGroups());
+    socket.on("group deleted", data => {
+        if (data?.groupId === selectedGroupId) resetSelectedChat();
+        loadGroups();
+    });
 
     socket.on("message reaction", data => {
         const element = document.querySelector(`[data-message-id="${data.messageId}"]`);
@@ -1721,6 +1760,7 @@ async function openChat(
 
     document.getElementById("mute-group-button").style.display = "none";
     document.getElementById("manage-group-button").style.display = "none";
+    document.getElementById("delete-group-button").style.display = "none";
 
 
     /*
@@ -2225,6 +2265,7 @@ async function openGroup(group) {
     document.getElementById("mute-group-button").style.display = "inline-block";
     document.getElementById("mute-group-button").textContent = group.muted ? "Unmute" : "Mute";
     document.getElementById("manage-group-button").style.display = "inline-block";
+    document.getElementById("delete-group-button").style.display = String(group.owner) === String(currentUserId) ? "inline-block" : "none";
     input.disabled = false;
     input.placeholder = `Message ${group.name}...`;
     document.getElementById("send-button").disabled = false;
@@ -2246,6 +2287,36 @@ async function manageGroup() {
     const modal = document.getElementById("group-members-modal");
     modal.classList.add("open");
     modal.setAttribute("aria-hidden", "false");
+}
+
+async function deleteGroup() {
+    const group = groups.find(item => item._id === selectedGroupId);
+    if (!group || String(group.owner) !== String(currentUserId)) return;
+
+    const confirmed = await showActionModal({
+        title: "Delete group?",
+        message: `Delete ${group.name} and all of its messages permanently?`,
+        confirmLabel: "Delete group",
+        danger: true
+    });
+    if (!confirmed) return;
+
+    try {
+        const response = await profileRequest(`/api/groups/${group._id}`, { method: "DELETE" });
+        const data = await response.json();
+        if (!response.ok) {
+            showToast(data.message || "Unable to delete group", "error");
+            return;
+        }
+
+        resetSelectedChat();
+        closeMobileChat();
+        showToast("Group deleted", "success");
+        await loadGroups();
+    } catch (error) {
+        console.error("Delete group error:", error);
+        showToast("Unable to connect to server", "error");
+    }
 }
 
 function renderGroupMembers(group) {
@@ -2992,6 +3063,7 @@ document.getElementById(
                 connectSocket();
 
                 loadUsers();
+                loadCurrentProfile();
 
 
             } catch (error) {
