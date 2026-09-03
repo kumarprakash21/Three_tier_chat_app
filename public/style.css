@@ -2178,6 +2178,14 @@ body::after {
 }
 
 @media (max-width: 750px) {
+    html,
+    body {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
     body {
         align-items: stretch;
     }
@@ -2186,6 +2194,10 @@ body::after {
         position: relative;
         display: block;
         overflow: hidden;
+        width: 100vw;
+        max-width: 100vw;
+        height: 100dvh;
+        max-height: 100dvh;
     }
 
     .sidebar {
@@ -2251,7 +2263,8 @@ body::after {
         z-index: 3;
         display: none;
         width: 100%;
-        height: 100%;
+        height: 100dvh;
+        max-height: 100dvh;
         min-height: 0;
         overflow: hidden;
     }
@@ -2328,11 +2341,15 @@ body::after {
     }
 
     .message-footer {
+        display: grid;
+        grid-template-columns: 34px 34px minmax(0, 1fr) 42px;
+        align-items: center;
         gap: 5px;
         padding: 9px 9px calc(9px + env(safe-area-inset-bottom));
     }
 
     .message-footer input {
+        width: 100%;
         min-width: 0;
         padding: 0 13px;
     }
