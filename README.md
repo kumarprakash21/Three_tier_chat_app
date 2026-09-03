@@ -257,6 +257,66 @@ npm start
 
 Open `http://localhost:3000` in a browser.
 
+## Run with Docker
+
+Build and start the application with MongoDB:
+
+```bash
+docker compose up --build
+```
+
+Set a JWT secret before starting the containers. You can create a `.env` file
+in the project root:
+
+```env
+JWT_SECRET=replace-with-a-long-random-secret
+```
+
+Open `http://localhost:3000`. MongoDB data and uploaded files are stored in
+Docker volumes so they survive container restarts.
+
+Stop the services with:
+
+```bash
+docker compose down
+```
+
+## Deploy to Kubernetes
+
+1. Build and push the image, replacing the placeholder registry name:
+
+```bash
+docker build -t YOUR_DOCKERHUB_USERNAME/chatapp:1.0 .
+docker push YOUR_DOCKERHUB_USERNAME/chatapp:1.0
+```
+
+2. Copy `k8s/secret.example.yaml` to `k8s/secret.yaml`, then replace the JWT
+secret and MongoDB connection string. Keep `secret.yaml` out of source control.
+
+3. Replace `YOUR_DOCKERHUB_USERNAME/chatapp:1.0` in `k8s/deployment.yaml` and
+replace `chat.example.com` in `k8s/ingress.yaml` with your image and domain.
+
+4. Apply the manifests:
+
+```bash
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/secret.yaml -n chatapp
+kubectl apply -f k8s/uploads-pvc.yaml -f k8s/deployment.yaml -f k8s/service.yaml -f k8s/ingress.yaml -n chatapp
+```
+
+5. Check the rollout:
+
+```bash
+kubectl rollout status deployment/chatapp -n chatapp
+kubectl get pods,service,ingress -n chatapp
+```
+
+The cluster needs an Ingress controller and a default StorageClass. The
+Ingress includes longer timeouts for Socket.IO connections. The initial
+deployment uses one replica because online-user state and uploads are local
+to the application pod. Add Redis Socket.IO scaling and shared object storage
+before increasing the replica count.
+
 ## Security Notes
 
 - Protected endpoints require a Bearer JWT in the `Authorization` header.

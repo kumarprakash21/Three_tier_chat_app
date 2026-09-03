@@ -141,6 +141,29 @@ function applyProfile(profile) {
     avatar.classList.toggle("has-image", Boolean(currentProfile.profilePicture));
 }
 
+function renderChatAvatar(avatar, label, profilePicture = "") {
+    const fallback = (label || "?").charAt(0).toUpperCase();
+    avatar.replaceChildren();
+    avatar.classList.remove("has-image");
+    avatar.style.backgroundImage = "";
+
+    if (!profilePicture) {
+        avatar.textContent = fallback;
+        return;
+    }
+
+    const image = document.createElement("img");
+    image.src = profilePicture;
+    image.alt = `${label || "User"} profile picture`;
+    image.addEventListener("error", () => {
+        avatar.replaceChildren();
+        avatar.textContent = fallback;
+        avatar.classList.remove("has-image");
+    }, { once: true });
+    avatar.appendChild(image);
+    avatar.classList.add("has-image");
+}
+
 function profileRequest(url, options = {}) {
     const token = localStorage.getItem("token");
 
@@ -641,6 +664,15 @@ async function register() {
 
 
         if (!response.ok) {
+
+            if (response.status === 409) {
+                await showActionModal({
+                    title: "Registration failed",
+                    message: "Username already exists",
+                    confirmLabel: "OK"
+                });
+                return;
+            }
 
             alert(
                 data.message ||
@@ -1235,10 +1267,7 @@ function connectSocket() {
 
             if (selectedUserId === data.userId) {
                 const chatAvatar = document.getElementById("chat-avatar");
-                chatAvatar.style.backgroundImage = data.profilePicture
-                    ? `url("${data.profilePicture}")`
-                    : "";
-                chatAvatar.classList.toggle("has-image", Boolean(data.profilePicture));
+                renderChatAvatar(chatAvatar, data.displayName || selectedUsername, data.profilePicture);
             }
         }
     );
@@ -1675,18 +1704,8 @@ async function openChat(
         user.username;
 
 
-    document.getElementById(
-        "chat-avatar"
-    ).textContent =
-        (user.displayName || user.username)
-            .charAt(0)
-            .toUpperCase();
-
     const chatAvatar = document.getElementById("chat-avatar");
-    chatAvatar.style.backgroundImage = user.profilePicture
-        ? `url("${user.profilePicture}")`
-        : "";
-    chatAvatar.classList.toggle("has-image", Boolean(user.profilePicture));
+    renderChatAvatar(chatAvatar, user.displayName || user.username, user.profilePicture);
 
 
     updateSelectedUserStatus();
@@ -2148,9 +2167,7 @@ async function loadGroups() {
     const selectedGroup = groups.find(group => group._id === selectedGroupId);
     if (selectedGroup) {
         const chatAvatar = document.getElementById("chat-avatar");
-        chatAvatar.textContent = selectedGroup.name.charAt(0).toUpperCase();
-        chatAvatar.style.backgroundImage = selectedGroup.profilePicture ? `url("${selectedGroup.profilePicture}")` : "";
-        chatAvatar.classList.toggle("has-image", Boolean(selectedGroup.profilePicture));
+        renderChatAvatar(chatAvatar, selectedGroup.name, selectedGroup.profilePicture);
     }
     if (socket) socket.emit("join groups", groups.map(group => group._id));
 }
@@ -2194,9 +2211,7 @@ async function openGroup(group) {
     document.getElementById("chat-username").textContent = group.name;
     document.getElementById("chat-status").textContent = `${group.members.length} members`;
     const chatAvatar = document.getElementById("chat-avatar");
-    chatAvatar.textContent = group.name.charAt(0).toUpperCase();
-    chatAvatar.style.backgroundImage = group.profilePicture ? `url("${group.profilePicture}")` : "";
-    chatAvatar.classList.toggle("has-image", Boolean(group.profilePicture));
+    renderChatAvatar(chatAvatar, group.name, group.profilePicture);
     document.getElementById("mute-group-button").style.display = "inline-block";
     document.getElementById("mute-group-button").textContent = group.muted ? "Unmute" : "Mute";
     document.getElementById("manage-group-button").style.display = "inline-block";
